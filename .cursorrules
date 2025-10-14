@@ -1,0 +1,201 @@
+# Crowley Capital - AI Assistant Rules
+
+## Project Overview
+Crowley Capital venture capital website with AI-powered blog system.
+
+## Tech Stack
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Backend**: Node.js + Express
+- **Database**: PostgreSQL (Render)
+- **AI**: OpenAI API (GPT-4o, GPT-4o-mini)
+
+## Project Structure
+```
+apps/
+  web/          # Frontend React app
+  api/          # Backend Node.js API
+docs/           # All documentation
+scripts/        # Utility scripts
+```
+
+## Coding Standards
+
+### TypeScript
+- Use strict mode
+- Prefer interfaces over types for objects
+- Use const for immutable values
+- Avoid `any` - use `unknown` if type is truly unknown
+
+### React
+- Functional components only
+- Use hooks (useState, useEffect, useMemo, useCallback)
+- Wrap callbacks in useCallback to prevent re-renders
+- Use React.memo for expensive components
+- Keep components small and focused
+
+### Styling
+- Use Tailwind CSS utilities
+- No inline hex colors - use Tailwind color classes
+- Use `cn()` helper from `@/lib/utils` for conditional classes
+- Component structure: `variant`, `size`, `className` props
+
+### File Organization
+- Components in `apps/web/src/components/`
+- Pages in `apps/web/src/pages/`
+- Utilities in `apps/web/src/lib/`
+- API logic in `apps/api/src/`
+
+### Naming Conventions
+- Components: PascalCase (`UserProfile.tsx`)
+- Files: kebab-case for utils (`api-client.ts`)
+- Hooks: camelCase starting with `use` (`useAuth.ts`)
+- Constants: UPPER_SNAKE_CASE
+
+### Import Order
+1. React/external libraries
+2. Internal components
+3. Utilities/helpers
+4. Types
+5. Styles
+
+### Performance
+- Use `useMemo` for expensive calculations
+- Use `useCallback` for function props
+- Avoid creating objects/arrays in render
+- Use `React.memo` sparingly (only for expensive components)
+
+### Error Handling
+- Always handle errors in async functions
+- Provide user-friendly error messages
+- Log errors for debugging
+- Use try-catch blocks
+
+### API Calls
+- Use environment variables for URLs
+- Handle loading states
+- Handle error states
+- Provide user feedback (toasts/notifications)
+
+### Database
+- Use parameterized queries (prevent SQL injection)
+- Handle connection errors
+- Close connections properly
+- Use transactions for multi-step operations
+
+### Security
+- Never commit API keys or passwords
+- Use environment variables for secrets
+- Validate all user input
+- Sanitize data before database insertion
+
+## Common Patterns
+
+### Component Structure
+```tsx
+interface Props {
+  variant?: 'default' | 'primary'
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+}
+
+export const Component: React.FC<Props> = ({ 
+  variant = 'default',
+  size = 'md',
+  className 
+}) => {
+  return (
+    <div className={cn('base-classes', variantClasses[variant], className)}>
+      {/* content */}
+    </div>
+  )
+}
+```
+
+### API Endpoint
+```typescript
+app.get('/api/resource', async (req, res) => {
+  try {
+    const data = await fetchData()
+    res.json({ success: true, data })
+  } catch (error) {
+    console.error('Error:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+```
+
+## Documentation
+- Update docs/ when adding features
+- Keep README.md current
+- Document complex logic with comments
+- Use JSDoc for function documentation
+
+## Testing
+- Test critical paths
+- Mock external APIs
+- Test error scenarios
+- Keep tests simple and readable
+
+## Git
+- Use descriptive commit messages
+- Keep commits focused and atomic
+- Don't commit node_modules or .env
+- Review changes before committing
+
+## Environment Variables
+Required in `.env`:
+- `DATABASE_URL` - PostgreSQL connection
+- `OPENAI_API_KEY` - OpenAI API key
+- `VITE_OPENAI_API_KEY` - Frontend OpenAI key
+- `VITE_ADMIN_PASSWORD` - Admin panel password
+- `VITE_API_URL` - Backend API URL
+
+## Key Features
+1. **Homepage** - Crowley Capital branding and info
+2. **Blog System** - AI-powered articles with admin dashboard
+3. **Admin Panel** - Article generation and management
+4. **AI Integration** - OpenAI for content generation
+
+## Common Tasks
+
+### Start Development
+```bash
+npm run dev
+# or
+./scripts/dev.sh
+```
+
+### Build for Production
+```bash
+npm run build
+# or
+./scripts/build.sh
+```
+
+### Add New Component
+1. Create in `apps/web/src/components/`
+2. Use TypeScript
+3. Export as named export
+4. Add to index if creating a component library
+
+### Add New API Endpoint
+1. Add route in `apps/api/src/server.js`
+2. Handle errors
+3. Document in `docs/architecture/api-guide.md`
+
+## Avoid
+- ❌ Inline styles (use Tailwind)
+- ❌ Class components (use functional)
+- ❌ Prop drilling (use context if needed)
+- ❌ Large components (split into smaller ones)
+- ❌ Hardcoded values (use constants/config)
+- ❌ Unhandled promises
+- ❌ Console.logs in production
+
+## When Helping
+1. Understand the context (check docs/)
+2. Follow existing patterns
+3. Keep code clean and readable
+4. Consider performance
+5. Handle errors gracefully
+6. Update documentation if needed

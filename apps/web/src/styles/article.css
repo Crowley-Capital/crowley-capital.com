@@ -1,0 +1,561 @@
+/**
+ * Article-specific styles for published content
+ * This stylesheet is only loaded on article detail pages
+ * Includes rich content sections: Pros/Cons, Alternatives, Mistakes, etc.
+ */
+
+/* ========================================
+   BASE ARTICLE CONTENT STYLING
+   ======================================== */
+
+.article-content {
+  @apply max-w-4xl mx-auto px-6 py-12;
+}
+
+.article-content h1 {
+  @apply text-5xl md:text-6xl font-light tracking-tight text-black mb-4;
+  font-family: 'DM Serif Display', serif;
+}
+
+.article-content h2 {
+  @apply text-3xl mb-6 mt-12 pb-3 border-b border-slate-200 font-light text-black tracking-tight;
+}
+
+.article-content h3 {
+  @apply text-2xl mb-4 mt-8 font-medium text-black tracking-tight;
+}
+
+.article-content p {
+  @apply text-slate-700 leading-relaxed mb-6 text-lg font-light;
+}
+
+.article-content ul,
+.article-content ol {
+  @apply space-y-3 mb-6 ml-6;
+}
+
+.article-content ul {
+  @apply list-disc;
+}
+
+.article-content ol {
+  @apply list-decimal;
+}
+
+.article-content li {
+  @apply text-slate-700 leading-relaxed;
+}
+
+.article-content a {
+  @apply text-black underline font-medium hover:text-slate-700 transition-colors;
+}
+
+.article-content strong {
+  @apply text-black font-medium;
+}
+
+.article-content code {
+  @apply bg-slate-100 px-2 py-1 rounded text-sm font-mono;
+}
+
+.article-content blockquote {
+  @apply border-l-4 border-black pl-6 italic text-slate-600 my-6;
+}
+
+/* ========================================
+   QUICK ANSWER BOX
+   ======================================== */
+
+.answer-box {
+  @apply bg-slate-50 border-2 border-black rounded-lg p-8 my-8;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.answer-box h2 {
+  @apply text-2xl font-medium text-black mb-4 mt-0 pb-0 border-b-0;
+}
+
+.answer-box p {
+  @apply text-slate-800 text-lg leading-relaxed mb-0;
+}
+
+/* ========================================
+   FAQ ACCORDION
+   ======================================== */
+
+.faq-accordion {
+  @apply space-y-4 my-8;
+}
+
+.faq-item {
+  @apply border border-slate-200 rounded-lg overflow-hidden;
+}
+
+.faq-question {
+  @apply px-6 py-4 bg-slate-50 font-medium text-black cursor-pointer hover:bg-slate-100 transition-colors;
+  list-style: none;
+}
+
+.faq-question::marker {
+  display: none;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-answer {
+  @apply px-6 py-4 bg-white;
+}
+
+.faq-answer p {
+  @apply mb-4 last:mb-0;
+}
+
+/* ========================================
+   PROS & CONS TABLE
+   ======================================== */
+
+.pros-cons-section {
+  @apply my-12;
+}
+
+.pros-cons-table {
+  @apply w-full border-collapse my-6;
+  border: 1px solid #e2e8f0;
+}
+
+.pros-cons-table thead {
+  @apply bg-slate-50;
+}
+
+.pros-cons-table th {
+  @apply px-6 py-4 text-left font-medium text-black border-b-2 border-slate-200;
+}
+
+.pros-header {
+  @apply text-green-700;
+}
+
+.cons-header {
+  @apply text-red-700;
+}
+
+.pros-cons-table td {
+  @apply px-6 py-4 align-top border-b border-slate-200;
+}
+
+.pros-cell {
+  @apply bg-green-50;
+}
+
+.cons-cell {
+  @apply bg-red-50;
+}
+
+.pros-cons-table strong {
+  @apply text-black font-medium block mb-1;
+}
+
+.pros-cons-table td span {
+  @apply block;
+}
+
+/* Responsive table on mobile */
+@media (max-width: 768px) {
+  .pros-cons-table {
+    @apply block;
+  }
+  
+  .pros-cons-table thead {
+    @apply hidden;
+  }
+  
+  .pros-cons-table tbody,
+  .pros-cons-table tr,
+  .pros-cons-table td {
+    @apply block;
+  }
+  
+  .pros-cons-table tr {
+    @apply mb-4 border border-slate-200 rounded-lg overflow-hidden;
+  }
+  
+  .pros-cell::before {
+    content: "✅ Pro: ";
+    @apply font-bold text-green-700;
+  }
+  
+  .cons-cell::before {
+    content: "❌ Con: ";
+    @apply font-bold text-red-700;
+  }
+}
+
+/* ========================================
+   ALTERNATIVES SECTION
+   ======================================== */
+
+.alternatives-section {
+  @apply my-10;
+}
+
+.alternative-card {
+  @apply bg-slate-50 border border-slate-200 rounded-lg mb-4 hover:border-slate-300 transition-colors;
+  padding: 0rem 1rem 1rem 2rem;
+}
+
+.alternative-card h3 {
+  @apply text-xl font-medium text-black mb-2 mt-0;
+}
+
+.alternative-card p {
+  @apply mb-2 last:mb-0;
+}
+
+/* ========================================
+   COMMON MISTAKES SECTION (Alarming)
+   ======================================== */
+
+.mistakes-section {
+  @apply my-10;
+}
+
+.mistakes-section > h2 {
+  @apply text-red-700 mb-5;
+}
+
+.mistake-card {
+  @apply flex gap-4 bg-red-50 border-2 border-red-200 rounded-lg p-5 mb-4;
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.1);
+}
+
+.mistake-icon {
+  @apply text-3xl flex-shrink-0 text-red-600;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.mistake-content {
+  @apply flex-1;
+}
+
+.mistake-title {
+  @apply text-xl font-medium text-red-900 mb-2;
+  line-height: 1.2;
+  margin-top: 0.4rem !important;
+}
+
+.mistake-description {
+  @apply text-slate-700 mb-3 leading-relaxed;
+}
+
+.mistake-solution {
+  @apply bg-white border-l-4 border-green-500 p-4 rounded mt-3;
+}
+
+.mistake-solution strong {
+  @apply text-green-700 font-medium;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .mistake-card {
+    @apply flex-col gap-2 p-4 mb-3;
+  }
+  
+  .mistake-icon {
+    @apply text-3xl;
+  }
+  
+  .mistake-title {
+    @apply text-lg mb-2;
+  }
+  
+  .mistake-description {
+    @apply text-sm mb-2;
+  }
+  
+  .mistake-solution {
+    @apply p-3 mt-2;
+  }
+}
+
+/* ========================================
+   TROUBLESHOOTING SECTION
+   ======================================== */
+
+.troubleshooting-section {
+  @apply my-10;
+}
+
+.troubleshooting-section > h2 {
+  @apply mb-5;
+}
+
+.troubleshooting-item {
+  @apply bg-slate-50 border border-slate-200 rounded-lg p-5 mb-4;
+}
+
+.problem-title {
+  @apply text-xl font-medium text-red-700 mb-3 mt-0;
+}
+
+.solution-content {
+  @apply mt-3;
+}
+
+.solution-content > p {
+  @apply mb-2 font-medium;
+}
+
+.solution-steps {
+  @apply list-decimal ml-6 space-y-2 mt-2;
+}
+
+.solution-steps li {
+  @apply text-slate-700 leading-relaxed;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .troubleshooting-item {
+    @apply p-4 mb-3;
+  }
+  
+  .problem-title {
+    @apply text-lg mb-2;
+  }
+  
+  .solution-content > p {
+    @apply text-sm mb-2;
+  }
+  
+  .solution-steps {
+    @apply space-y-1 mt-2;
+  }
+  
+  .solution-steps li {
+    @apply text-sm;
+  }
+}
+
+/* ========================================
+   EXAMPLES SECTION
+   ======================================== */
+
+.examples-section {
+  @apply my-10;
+}
+
+.examples-section > h2 {
+  @apply mb-5;
+}
+
+.example-card {
+  @apply bg-green-50 border border-green-200 rounded-lg p-5 mb-4;
+  padding: 0rem 1rem 1rem 2rem;
+}
+
+.example-card h3 {
+  @apply text-xl font-medium text-black mb-4 mt-0;
+}
+
+.example-context,
+.example-approach,
+.example-outcome {
+  @apply mb-3 text-slate-700 leading-relaxed;
+}
+
+.example-context strong,
+.example-approach strong,
+.example-outcome strong {
+  @apply text-black font-medium;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .example-card {
+    @apply p-4 mb-3;
+  }
+  
+  .example-card h3 {
+    @apply text-lg mb-3;
+  }
+  
+  .example-context,
+  .example-approach,
+  .example-outcome {
+    @apply text-sm mb-2;
+  }
+  
+  .example-context strong,
+  .example-approach strong,
+  .example-outcome strong {
+    @apply text-sm;
+  }
+}
+
+/* ========================================
+   CHECKLIST SECTION
+   ======================================== */
+
+.checklist-section {
+  @apply my-10 bg-slate-50 border border-slate-200 rounded-lg p-5;
+  padding: 0rem 1rem 1rem 2rem;
+
+}
+
+.checklist-section > h2 {
+  @apply mb-5;
+}
+
+.checklist-category {
+  @apply mb-5;
+}
+
+.checklist-category h3 {
+  @apply text-xl font-medium text-black mb-3 mt-0;
+}
+
+.checklist-items {
+  @apply list-none ml-0 space-y-2;
+}
+
+.checklist-item {
+  @apply mb-0;
+}
+
+.checklist-item label {
+  @apply flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer;
+  display: flex;
+}
+
+.checklist-item label:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.checklist-item input[type="checkbox"] {
+  @apply h-5 w-5 flex-shrink-0 cursor-pointer rounded;
+  accent-color: #000;
+  margin: 0;
+}
+
+.checklist-item input[type="checkbox"]:checked ~ span {
+  @apply line-through text-slate-400;
+  transition: all 0.2s ease;
+}
+
+.checklist-item span {
+  @apply text-slate-700 leading-snug font-normal cursor-pointer;
+  flex: 1;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .checklist-section {
+    @apply p-4;
+  }
+  
+  .checklist-category h3 {
+    @apply text-lg mb-2;
+  }
+  
+  .checklist-items {
+    @apply space-y-1;
+  }
+  
+  .checklist-item label {
+    @apply gap-2 p-2;
+  }
+  
+  .checklist-item input[type="checkbox"] {
+    @apply h-4 w-4;
+  }
+  
+  .checklist-item span {
+    @apply text-sm;
+  }
+}
+
+/* ========================================
+   REFERENCES SECTION
+   ======================================== */
+
+.references-section {
+  @apply my-12 pt-8 border-t-2 border-slate-200;
+}
+
+.references-section h2 {
+  @apply text-2xl font-medium text-black mb-4;
+}
+
+.references-list {
+  @apply list-decimal ml-6 space-y-3;
+}
+
+.references-list li {
+  @apply text-slate-700 leading-relaxed;
+}
+
+.references-list a {
+  @apply text-black underline font-medium hover:text-slate-700 transition-colors;
+}
+
+/* ========================================
+   KEY TAKEAWAYS
+   ======================================== */
+
+.key-takeaways {
+  @apply bg-slate-50 border-l-4 border-black rounded-r-lg p-6 my-8;
+}
+
+.key-takeaways h2,
+.key-takeaways h3 {
+  @apply text-xl font-medium text-black mb-4 mt-0 pb-0 border-b-0;
+}
+
+.key-takeaways ul {
+  @apply space-y-2 ml-0 list-none;
+}
+
+.key-takeaways li {
+  @apply flex items-start gap-3;
+}
+
+.key-takeaways li::before {
+  content: "✓";
+  @apply text-black font-bold text-xl flex-shrink-0;
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  .article-content {
+    @apply px-0;
+  }
+  
+  .article-content a {
+    @apply text-black no-underline;
+  }
+  
+  .article-content a::after {
+    content: " (" attr(href) ")";
+    @apply text-xs text-slate-500;
+  }
+  
+  .mistake-card,
+  .example-card,
+  .alternative-card,
+  .troubleshooting-item {
+    @apply border-2;
+    box-shadow: none;
+  }
+  
+  .checklist-item input[type="checkbox"] {
+    @apply border-2 border-black;
+  }
+}
+

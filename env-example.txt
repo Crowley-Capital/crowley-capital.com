@@ -1,0 +1,23 @@
+# ==================== DATABASE ====================
+DATABASE_URL=postgresql://user:password@host:port/database
+
+# ==================== OPENAI API ====================
+OPENAI_API_KEY=your-openai-api-key-here
+
+# ==================== AI MODEL CONFIGURATION ====================
+# Content Generation Models
+CONTENT_MODEL=gpt-4o
+CONTENT_MODEL_FALLBACK=gpt-4o-mini
+
+# Formatting Models
+FORMATTER_MODEL=gpt-4o-mini
+FORMATTER_MODEL_FALLBACK=gpt-4o-mini
+
+# ==================== BACKEND ====================
+PORT=3001
+FRONTEND_URL=https://your-domain.com
+
+# ==================== FRONTEND ====================
+API_URL=http://localhost:3001/api
+ADMIN_PASSWORD=your-admin-password-here
+

@@ -1,0 +1,1156 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAdminAuth } from '@/context/AdminAuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Plus, Settings, FileText, Calendar, Sparkles, Loader2, CheckCircle, AlertCircle, X, Search, Trash2, Wand2, Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import CCVNavbar from '@/components/CCV/CCVNavbar';
+import CCVFooter from '@/components/CCV/CCVFooter';
+import { AI_SETTINGS } from '@/config/aiPrompts';
+import { saveSettings, loadSettings, toCronExpression, fromCronExpression } from '@/lib/db';
+
+const AdminLogin: React.FC<{ onLogin: (password: string) => void }> = React.memo(({ onLogin }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      onLogin(password);
+    } catch {
+      setError('Invalid password');
+      setPassword('');
+    }
+  }, [password, onLogin]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 flex items-center justify-center px-6">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-light">Admin Access</CardTitle>
+          <CardDescription>Enter your password to access the admin dashboard</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter admin password"
+                className="text-lg py-3 transition-none"
+                autoFocus
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+            </div>
+            <Button type="submit" className="w-full bg-black hover:bg-slate-800 text-white py-3 text-lg transition-none">
+              Login
+            </Button>
+            <p className="text-xs text-slate-500 text-center mt-4">
+              Default password: admin123 (change this in production!)
+            </p>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+});
+
+const AdminDashboard: React.FC = React.memo(() => {
+  const toastHook = useToast();
+  
+  // Memoize toast to prevent useCallback dependencies from changing
+  const toast = useCallback(toastHook.toast, []);
+  
+  // Settings state
+  const [frequency, setFrequency] = useState('weekly');
+  const [day, setDay] = useState('monday');
+  const [time, setTime] = useState('09:00');
+  const [autoGenerate, setAutoGenerate] = useState(true);
+  const [topics, setTopics] = useState(AI_SETTINGS.DEFAULT_TOPICS.join(', '));
+  const [newTopic, setNewTopic] = useState('');
+  
+  // Brand Essence state
+  const [positioning, setPositioning] = useState('');
+  const [tone, setTone] = useState('');
+  const [brandPillars, setBrandPillars] = useState('');
+
+  // AI state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState('');
+  // Removed: generatedArticle state (using background generation)
+  const [apiConnected, setApiConnected] = useState<boolean | null>(null);
+  
+  // Generation input state
+  const [inputType, setInputType] = useState('topic'); // 'topic', 'brief', 'keywords'
+  const [customBrief, setCustomBrief] = useState('');
+  const [keywordList, setKeywordList] = useState('');
+  const [isFeatured, setIsFeatured] = useState(false);
+
+  // Articles state
+  const [articles, setArticles] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Simple notification state
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  
+  // Generation status state
+  const [generationStatus, setGenerationStatus] = useState<'generating' | 'formatting' | 'metadata' | null>(null);
+
+  // Memoize parsed topics array to prevent unnecessary re-renders
+  const topicsArray = useMemo(() => {
+    return topics.split(',').map(t => t.trim()).filter(t => t.length > 0);
+  }, [topics]);
+
+  // Test OpenAI API connection via backend and load settings on mount
+  useEffect(() => {
+    // Test OpenAI connection through backend
+    const testOpenAIConnection = async () => {
+      const apiUrl = import.meta.env.API_URL;
+      if (!apiUrl) {
+        setApiConnected(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${apiUrl}/openai/status`);
+        if (response.ok) {
+          const data = await response.json();
+          setApiConnected(data.connected);
+          if (!data.hasApiKey) {
+            console.error('OpenAI API key not configured in backend');
+          }
+        } else {
+          setApiConnected(false);
+        }
+      } catch (error) {
+        console.error('OpenAI connection test failed:', error);
+        setApiConnected(false);
+      }
+    };
+    
+    testOpenAIConnection();
+    
+    // Load settings from database
+    loadSettings().then(settings => {
+      if (settings) {
+        setTopics(settings.topics.join(', '));
+        setAutoGenerate(settings.auto);
+        
+        // Parse cron expression
+        const parsed = fromCronExpression(settings.schedule);
+        setFrequency(parsed.frequency);
+        setDay(parsed.day);
+        setTime(parsed.time);
+        
+        // Load Brand Essence fields
+        if (settings.positioning) setPositioning(settings.positioning);
+        if (settings.tone) setTone(settings.tone);
+        if (settings.brand_pillars) setBrandPillars(settings.brand_pillars);
+      }
+    }).catch(error => {
+      console.error('Error loading settings:', error);
+    });
+
+    // Load articles (mock data for now - will be replaced with API call)
+    loadArticles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  
+
+  // Memoize filtered articles to prevent unnecessary re-renders
+  const filteredArticles = useMemo(() => {
+    let filtered = articles;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(article => article.status === statusFilter);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(article => 
+        article.title.toLowerCase().includes(query) ||
+        article.description.toLowerCase().includes(query) ||
+        article.topic.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [articles, statusFilter, searchQuery]);
+
+  const loadArticles = useCallback(async () => {
+    const apiUrl = import.meta.env.API_URL;
+    
+    if (!apiUrl) {
+      console.warn('Backend API not configured. Using empty articles list.');
+      setArticles([]);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${apiUrl}/articles`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to load articles');
+      }
+      
+      const articlesData = await response.json();
+      setArticles(articlesData);
+    } catch (error) {
+      console.error('Error loading articles:', error);
+      // Set empty array on error to prevent UI issues
+      setArticles([]);
+    }
+  }, []);
+
+  const handleSaveSettings = async () => {
+    try {
+      // Convert frequency/day/time to cron expression
+      const schedule = toCronExpression(frequency, day, time);
+      
+      // Save to database
+      await saveSettings({
+        topics: topicsArray,
+        schedule,
+        auto: autoGenerate,
+        positioning,
+        tone,
+        brand_pillars: brandPillars
+      });
+      
+      toast({
+        title: 'Settings Saved',
+        description: 'Your AI generation settings have been saved successfully.',
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: 'Settings Saved (Locally)',
+        description: 'Settings saved to browser storage. Backend API not configured.',
+        variant: 'default',
+      });
+    }
+  };
+
+  const handleGenerateArticle = useCallback(async () => {
+    // API key check removed - handled by backend
+    setIsGenerating(true);
+
+    try {
+      let params: any = {
+        inputType: inputType,
+        featured: isFeatured
+      };
+      
+      switch (inputType) {
+        case 'brief':
+          if (!customBrief.trim()) {
+            toast({
+              title: 'Brief Required',
+              description: 'Please enter a custom brief.',
+              variant: 'destructive',
+            });
+            setIsGenerating(false);
+            return;
+          }
+          params.customBrief = customBrief;
+          break;
+          
+        case 'keywords':
+          if (!keywordList.trim()) {
+            toast({
+              title: 'Keywords Required',
+              description: 'Please enter target keywords.',
+              variant: 'destructive',
+            });
+            setIsGenerating(false);
+            return;
+          }
+          params.keywordList = keywordList;
+          break;
+          
+        case 'topic':
+        default:
+          if (topicsArray.length === 0) {
+            toast({
+              title: 'No Topics Available',
+              description: 'Please add topics in AI Settings before generating articles.',
+              variant: 'destructive',
+            });
+            setIsGenerating(false);
+            return;
+          }
+          const topic = selectedTopic || topicsArray[Math.floor(Math.random() * topicsArray.length)];
+          params.topic = topic;
+          break;
+      }
+      
+      // Call backend to generate in background
+      const apiUrl = import.meta.env.API_URL;
+      const response = await fetch(`${apiUrl}/articles/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params)
+      });
+
+      const data = await response.json();
+      const jobId = data.jobId;
+      
+      // Show simple notification
+      setNotificationMessage('Article generation started! Your article will be published within the next 5-10 minutes.');
+      setShowNotification(true);
+      
+      // Set initial status
+      setGenerationStatus('generating');
+
+      // Keep button disabled and poll for status updates
+      const initialArticleCount = articles.length;
+      let pollCount = 0;
+      const maxPolls = 60; // Poll for up to 10 minutes (60 * 10 seconds)
+      
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        
+        // Fetch generation status
+        const apiUrl = import.meta.env.API_URL;
+        try {
+          const statusResponse = await fetch(`${apiUrl}/articles/status/${jobId}`);
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            setGenerationStatus(statusData.step);
+          }
+        } catch (err) {
+          console.log('Status check failed:', err);
+        }
+        
+        // Fetch latest articles
+        const response = await fetch(`${apiUrl}/articles`);
+        const latestArticles = await response.json();
+        
+        // Check if a new article was added
+        if (latestArticles.length > initialArticleCount) {
+          clearInterval(pollInterval);
+          setIsGenerating(false);
+          setGenerationStatus(null);
+          setArticles(latestArticles);
+          setNotificationMessage('Article Published! ✨ Your new article is now live.');
+          setShowNotification(true);
+          return;
+        }
+        
+        // Update articles list
+        setArticles(latestArticles);
+        
+        // Stop polling after max attempts
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+          setIsGenerating(false);
+          setGenerationStatus(null);
+          setNotificationMessage('Generation taking longer than expected. Please check back in a few minutes.');
+          setShowNotification(true);
+        }
+      }, 10000); // Poll every 10 seconds
+      
+      // Also stop generating state after 10 minutes regardless
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setIsGenerating(false);
+        setGenerationStatus(null);
+      }, 600000); // 10 minutes
+      
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      toast({
+        title: 'Generation Failed',
+        description: error.message || 'Failed to start article generation.',
+        variant: 'destructive',
+      });
+      setIsGenerating(false);
+    }
+  }, [inputType, customBrief, keywordList, topicsArray, selectedTopic, isFeatured, toast, loadArticles]);
+
+  const handleGenerateTopics = async () => {
+    try {
+      toast({
+        title: 'Generating Topics',
+        description: 'Creating new topic ideas...',
+      });
+
+      const newTopics = await generateTopicIdeas();
+      setTopics(newTopics.join(', '));
+      
+      toast({
+        title: 'Topics Generated!',
+        description: `Generated ${newTopics.length} new topic ideas.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Failed to Generate Topics',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const addTopic = () => {
+    if (newTopic.trim()) {
+      setTopics(topics + ', ' + newTopic.trim());
+      setNewTopic('');
+    }
+  };
+
+  const removeTopic = (topicToRemove: string) => {
+    const updatedTopics = topicsArray.filter(t => t !== topicToRemove);
+    setTopics(updatedTopics.join(', '));
+  };
+
+  const handleDeleteArticle = useCallback(async (articleId: number) => {
+    const apiUrl = import.meta.env.API_URL;
+    
+    if (!apiUrl) {
+      toast({
+        title: 'Backend Not Configured',
+        description: 'Backend API is not configured.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${apiUrl}/articles/${articleId}`, { 
+        method: 'DELETE' 
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete article');
+      }
+      
+      // Remove from local state
+      setArticles(prev => prev.filter(article => article.id !== articleId));
+      
+      toast({
+        title: 'Article Deleted',
+        description: 'The article has been permanently deleted.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Delete Failed',
+        description: 'Failed to delete article from database.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  const handleImproveArticle = useCallback(async (articleId: number) => {
+    // Placeholder for future AI improvement feature
+    toast({
+      title: 'Coming Soon',
+      description: 'AI article improvement feature will be available soon.',
+    });
+  }, [toast]);
+
+  const handlePublishArticle = useCallback(async (articleId: number) => {
+    const apiUrl = import.meta.env.API_URL;
+    
+    if (!apiUrl) {
+      toast({
+        title: 'Backend Not Configured',
+        description: 'Backend API is not configured.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${apiUrl}/articles/${articleId}`, { 
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          status: 'published', 
+          date_published: new Date().toISOString() 
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to publish article');
+      }
+      
+      const updatedArticle = await response.json();
+      
+      // Update local state
+      setArticles(prev => prev.map(article => 
+        article.id === articleId ? updatedArticle : article
+      ));
+      
+      toast({
+        title: 'Article Published',
+        description: 'The article has been published successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Publish Failed',
+        description: 'Failed to publish article to database.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  const getStatusBadgeColor = useCallback((status: string) => {
+    switch (status) {
+      case 'published':
+        return 'bg-green-600 text-white';
+      case 'scheduled':
+        return 'bg-blue-600 text-white';
+      case 'draft':
+        return 'bg-slate-500 text-white';
+      default:
+        return 'bg-slate-300 text-slate-900';
+    }
+  }, []);
+
+  const formatDate = useCallback((dateString: string | null) => {
+    if (!dateString) return 'Not published';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <CCVNavbar />
+      
+      {/* Simple Notification Popup */}
+      {showNotification && (
+        <div className="fixed top-4 right-4 z-[9999] max-w-md">
+          <div className="bg-white text-slate-900 rounded-lg shadow-2xl border-2 border-slate-300 p-6 pr-12 transition-none">
+            <button
+              onClick={() => setShowNotification(false)}
+              className="absolute top-2 right-2 text-slate-500 hover:text-slate-900 p-1 rounded-md hover:bg-slate-100 transition-none"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <p className="text-base font-light leading-relaxed">{notificationMessage}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Header - Added pt-20 to prevent navbar overlap */}
+      <div className="bg-gradient-to-br from-black via-slate-900 to-slate-800 py-12 pt-20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-light text-white mb-2">Admin Dashboard</h1>
+              <p className="text-slate-300 text-lg">Manage your blog content and AI generation settings</p>
+            </div>
+            {/* Test notification button */}
+            <button
+              onClick={() => {
+                console.log('Test button clicked!');
+                setNotificationMessage('Test notification - this is working!');
+                setShowNotification(true);
+              }}
+              className="bg-white text-black px-4 py-2 rounded-lg hover:bg-slate-200 transition-none"
+            >
+              Test Notification
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        <Tabs defaultValue="generate" className="space-y-8">
+          <div className="flex items-center justify-between">
+            <TabsList className="bg-white border-2 border-slate-200 p-1">
+              <TabsTrigger value="generate" className="data-[state=active]:bg-black data-[state=active]:text-white">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="data-[state=active]:bg-black data-[state=active]:text-white">
+                <Settings className="h-4 w-4 mr-2" />
+                AI Settings
+              </TabsTrigger>
+              <TabsTrigger value="articles" className="data-[state=active]:bg-black data-[state=active]:text-white">
+                <FileText className="h-4 w-4 mr-2" />
+                All Articles
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* API Connection Status Badge - Inline with tabs */}
+            {apiConnected === null ? (
+              <Badge className="bg-slate-500 text-white px-4 py-2 text-sm">
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                Checking...
+              </Badge>
+            ) : apiConnected ? (
+              <Badge className="bg-green-600 text-white px-4 py-2 text-sm">
+                <CheckCircle className="h-3 w-3 mr-2" />
+                OpenAI API Connected
+              </Badge>
+            ) : (
+              <Badge className="bg-red-600 text-white px-4 py-2 text-sm">
+                <AlertCircle className="h-3 w-3 mr-2" />
+                Not Connected
+              </Badge>
+            )}
+          </div>
+
+          {/* AI Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl font-light">Brand Essence</CardTitle>
+                <CardDescription>Define your brand's core identity and voice</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="positioning">Positioning</Label>
+                  <Textarea
+                    id="positioning"
+                    placeholder="Describe your brand's unique market position..."
+                    value={positioning}
+                    onChange={(e) => setPositioning(e.target.value)}
+                    className="min-h-[100px] transition-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tone">Tone</Label>
+                  <Textarea
+                    id="tone"
+                    placeholder="Describe your brand's communication tone and style..."
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value)}
+                    className="min-h-[100px] transition-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="brand-pillars">Brand Pillars</Label>
+                  <Textarea
+                    id="brand-pillars"
+                    placeholder="List your brand's core pillars and values..."
+                    value={brandPillars}
+                    onChange={(e) => setBrandPillars(e.target.value)}
+                    className="min-h-[100px] transition-none"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-light">Generation Frequency</CardTitle>
+                    <CardDescription>Configure how often AI generates new articles</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="auto-generate" className="text-sm font-medium text-slate-700 cursor-pointer">
+                      Automatic Generation
+                    </Label>
+                    <Switch 
+                      id="auto-generate" 
+                      checked={autoGenerate} 
+                      onCheckedChange={setAutoGenerate}
+                      className="data-[state=checked]:bg-green-600"
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Daily - Frequency and Time */}
+                {frequency === 'daily' && (
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Select value={frequency} onValueChange={setFrequency}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AI_SETTINGS.FREQUENCY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="time">Time</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Weekly or Biweekly - Frequency, Day and Time */}
+                {(frequency === 'weekly' || frequency === 'biweekly') && (
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Select value={frequency} onValueChange={setFrequency}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AI_SETTINGS.FREQUENCY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="day">Day of Week</Label>
+                      <Select value={day} onValueChange={setDay}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monday">Monday</SelectItem>
+                          <SelectItem value="tuesday">Tuesday</SelectItem>
+                          <SelectItem value="wednesday">Wednesday</SelectItem>
+                          <SelectItem value="thursday">Thursday</SelectItem>
+                          <SelectItem value="friday">Friday</SelectItem>
+                          <SelectItem value="saturday">Saturday</SelectItem>
+                          <SelectItem value="sunday">Sunday</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="time">Time</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Monthly - Frequency, Date and Time */}
+                {frequency === 'monthly' && (
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Select value={frequency} onValueChange={setFrequency}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AI_SETTINGS.FREQUENCY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="date">Day of Month</Label>
+                      <Input
+                        id="date"
+                        type="number"
+                        min="1"
+                        max="28"
+                        value={day}
+                        onChange={(e) => setDay(e.target.value)}
+                        placeholder="1-28"
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="time">Time</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl font-light">Article Topics</CardTitle>
+                <CardDescription>Topics that AI will use to generate articles</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {topicsArray.map((topic) => (
+                    <Badge 
+                      key={topic} 
+                      variant="secondary" 
+                      className="px-3 py-1.5 flex items-center gap-2 hover:bg-slate-300 transition-none"
+                    >
+                      {topic}
+                      <button
+                        onClick={() => removeTopic(topic)}
+                        className="hover:bg-slate-400 rounded-full p-0.5 transition-none"
+                        aria-label={`Remove ${topic}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Enter new topic..."
+                    value={newTopic}
+                    onChange={(e) => setNewTopic(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addTopic()}
+                    className="max-w-xs"
+                  />
+                  <Button onClick={addTopic} variant="outline" className="whitespace-nowrap transition-none">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Topic
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end gap-4">
+              <Button onClick={handleSaveSettings} className="bg-black hover:bg-slate-800 text-white px-8 transition-none">
+                Save Settings
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Generate Tab */}
+          <TabsContent value="generate" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl font-light flex items-center gap-2">
+                  <Sparkles className="h-6 w-6" />
+                  Generate New Article
+                </CardTitle>
+                <CardDescription>Use AI to automatically create a new blog article</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Grid Layout */}
+                <div className="space-y-6">
+                  {/* Top Row - Input Type, AI Model, Featured */}
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {/* Input Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="input-type">Input Type</Label>
+                      <Select value={inputType} onValueChange={setInputType}>
+                        <SelectTrigger id="input-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="topic">Choose a Topic</SelectItem>
+                          <SelectItem value="brief">Custom Brief</SelectItem>
+                          <SelectItem value="keywords">Keyword List</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Featured Toggle */}
+                    <div className="space-y-2">
+                      <Label htmlFor="featured-toggle">Featured</Label>
+                      <div className="flex items-center gap-3 h-10">
+                        <Switch
+                          id="featured-toggle"
+                          checked={isFeatured}
+                          onCheckedChange={setIsFeatured}
+                          className="data-[state=checked]:bg-black"
+                        />
+                        <span className="text-sm text-slate-600">Highlight article</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Input Content */}
+                  {inputType === 'topic' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="topic-select">Select Topic</Label>
+                      <Select value={selectedTopic} onValueChange={setSelectedTopic}>
+                        <SelectTrigger id="topic-select">
+                          <SelectValue placeholder="Random topic from your settings" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {topicsArray.map((topic) => (
+                            <SelectItem key={topic} value={topic}>
+                              {topic}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500">
+                        Leave empty to randomly select from your configured topics
+                      </p>
+                    </div>
+                  )}
+
+                  {inputType === 'brief' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-brief">Custom Brief</Label>
+                      <Textarea
+                        id="custom-brief"
+                        placeholder="Describe what you want the article to be about..."
+                        value={customBrief}
+                        onChange={(e) => setCustomBrief(e.target.value)}
+                        rows={10}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-slate-500">
+                        Provide detailed instructions for the AI to follow
+                      </p>
+                    </div>
+                  )}
+
+                  {inputType === 'keywords' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="keyword-list">Keyword List</Label>
+                      <Textarea
+                        id="keyword-list"
+                        placeholder="Enter keywords separated by commas (e.g., startup, funding, growth, strategy)"
+                        value={keywordList}
+                        onChange={(e) => setKeywordList(e.target.value)}
+                        rows={10}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-slate-500">
+                        AI will create an article incorporating these keywords
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Generate Button - At Bottom */}
+                  <Button 
+                    onClick={handleGenerateArticle}
+                    className="w-full bg-black hover:bg-slate-800 text-white py-6 text-lg transition-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isGenerating || !apiConnected}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        {generationStatus === 'generating' && 'Please wait... Generating Article'}
+                        {generationStatus === 'formatting' && 'Please wait... Formatting Article'}
+                        {generationStatus === 'metadata' && 'Please wait... Generating Metadata'}
+                        {!generationStatus && 'Please wait... Processing...'}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Generate Article Now
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Generated Article Preview */}
+            
+          </TabsContent>
+
+          {/* All Articles Tab */}
+          <TabsContent value="articles" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl font-light">All Articles</CardTitle>
+                <CardDescription>Manage and review all blog articles</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Filters and Search */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search articles by title, description, or topic..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Results Count */}
+                <div className="text-sm text-slate-600">
+                  Showing {filteredArticles.length} of {articles.length} articles
+                </div>
+
+                {/* Articles Accordion */}
+                {filteredArticles.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500">No articles found</p>
+                    <p className="text-sm text-slate-400 mt-2">
+                      {searchQuery || statusFilter !== 'all' 
+                        ? 'Try adjusting your filters' 
+                        : 'Generate your first article to get started'}
+                    </p>
+                  </div>
+                ) : (
+                  <Accordion type="single" collapsible className="space-y-4">
+                    {filteredArticles.map((article) => (
+                      <AccordionItem 
+                        key={article.id} 
+                        value={`article-${article.id}`}
+                        className="border-2 border-slate-200 rounded-xl overflow-hidden"
+                      >
+                        <AccordionTrigger className="px-6 py-4 hover:bg-slate-50 hover:no-underline">
+                          <div className="flex items-start justify-between w-full pr-4">
+                            <div className="flex-1 text-left space-y-2">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Badge className={getStatusBadgeColor(article.status)}>
+                                  {article.status.charAt(0).toUpperCase() + article.status.slice(1)}
+                                </Badge>
+                                <span className="text-xs text-slate-500">
+                                  {formatDate(article.date_published)}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {article.topic}
+                                </Badge>
+                              </div>
+                              <h3 className="text-lg font-semibold text-slate-900">
+                                {article.title}
+                              </h3>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-6 pb-4">
+                          <div className="space-y-4 pt-4 border-t-2 border-slate-100">   
+                            <div>
+                              <div 
+                                className="text-sm text-slate-600 mt-1"
+                                dangerouslySetInnerHTML={{ 
+                                  __html: (() => {
+                                    // Extract Quick Answer content without the title
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(article.article, 'text/html');
+                                    const answerBox = doc.querySelector('.answer-box');
+                                    if (answerBox) {
+                                      // Remove the h2 title
+                                      const h2 = answerBox.querySelector('h2');
+                                      if (h2) h2.remove();
+                                      return answerBox.innerHTML;
+                                    }
+                                    return article.description || 'No quick answer available';
+                                  })()
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => handlePublishArticle(article.id)}
+                                disabled={article.status !== 'draft'}
+                                className="flex-1 border-2 border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-none"
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Publish
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleImproveArticle(article.id)}
+                                className="flex-1 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 transition-none"
+                              >
+                                <Wand2 className="h-4 w-4 mr-2" />
+                                Improve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleDeleteArticle(article.id)}
+                                className="flex-1 border-2 border-red-200 text-red-700 hover:bg-red-50 transition-none"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
+
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <CCVFooter />
+    </div>
+  );
+});
+
+const Admin: React.FC = () => {
+  const { isAuthenticated, isLoading, login } = useAdminAuth();
+
+  const handleLogin = useCallback((password: string) => {
+    const success = login(password);
+    if (!success) {
+      throw new Error('Invalid password');
+    }
+  }, [login]);
+
+  // Show nothing while checking authentication
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <AdminLogin onLogin={handleLogin} />;
+  }
+
+  return <AdminDashboard />;
+};
+
+export default Admin;

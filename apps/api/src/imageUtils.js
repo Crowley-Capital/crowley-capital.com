@@ -11,10 +11,11 @@
 import OpenAI from 'openai';
 import fetch from 'node-fetch';
 import sharp from 'sharp';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import { uploadToCloud, isCloudStorageEnabled } from './cloudStorage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -223,9 +224,42 @@ async function optimizeImage(buffer) {
 }
 
 /**
- * Save image to public directory
+ * Save image to cloud storage (R2) or local directory (fallback for development)
  */
 async function saveImage(buffer, filename) {
+  // Check if cloud storage is configured
+  if (isCloudStorageEnabled()) {
+    console.log('☁️  Using cloud storage (Cloudflare R2)...');
+    
+    try {
+      // Save to temporary location first
+      const tempDir = join(__dirname, '..', 'temp');
+      if (!existsSync(tempDir)) {
+        await mkdir(tempDir, { recursive: true });
+      }
+      
+      const tempFilePath = join(tempDir, filename);
+      await writeFile(tempFilePath, buffer);
+      
+      // Upload to cloud storage
+      const storageKey = `articles/${filename}`;
+      const publicUrl = await uploadToCloud(tempFilePath, storageKey, 'image/jpeg');
+      
+      // Clean up temporary file
+      await unlink(tempFilePath);
+      
+      console.log(`✅ Image uploaded to cloud: ${publicUrl}`);
+      return publicUrl;
+    } catch (error) {
+      console.error('❌ Error uploading to cloud storage:', error.message);
+      console.log('   Falling back to local storage...');
+      // Fall through to local storage
+    }
+  }
+  
+  // LOCAL STORAGE (Development or fallback)
+  console.log('💾 Using local storage (ephemeral on Render)...');
+  
   // Save to web app's public directory
   const publicDir = join(__dirname, '..', '..', '..', 'apps', 'web', 'public', 'images', 'articles');
   
@@ -239,9 +273,9 @@ async function saveImage(buffer, filename) {
   
   try {
     await writeFile(filePath, buffer);
-    console.log(`✅ Image saved: ${filePath}`);
+    console.log(`✅ Image saved locally: ${filePath}`);
     
-    // Return the public URL path
+    // Return the public URL path (relative)
     return `/images/articles/${filename}`;
   } catch (error) {
     console.error('❌ Error saving image:', error.message);

@@ -10,11 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, Settings, FileText, Calendar, Sparkles, Loader2, CheckCircle, AlertCircle, X, Search, Trash2, Wand2, Send } from 'lucide-react';
+import { Plus, Settings, FileText, Calendar, Sparkles, Loader2, CheckCircle, AlertCircle, X, Search, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CCVNavbar from '@/components/CCV/CCVNavbar';
 import CCVFooter from '@/components/CCV/CCVFooter';
-import { AI_SETTINGS } from '@/config/aiPrompts';
+import { DEFAULT_TOPICS, FREQUENCY_OPTIONS } from '@/config/settings';
 import { saveSettings, loadSettings, toCronExpression, fromCronExpression } from '@/lib/db';
 
 const AdminLogin: React.FC<{ onLogin: (password: string) => void }> = React.memo(({ onLogin }) => {
@@ -77,7 +77,7 @@ const AdminDashboard: React.FC = React.memo(() => {
   const [day, setDay] = useState('monday');
   const [time, setTime] = useState('09:00');
   const [autoGenerate, setAutoGenerate] = useState(true);
-  const [topics, setTopics] = useState(AI_SETTINGS.DEFAULT_TOPICS.join(', '));
+  const [topics, setTopics] = useState(DEFAULT_TOPICS.join(', '));
   const [newTopic, setNewTopic] = useState('');
   
   // Brand Essence state
@@ -86,15 +86,20 @@ const AdminDashboard: React.FC = React.memo(() => {
   const [brandPillars, setBrandPillars] = useState('');
 
   // AI state
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(() => {
+    // Check localStorage on mount for persistent generation state
+    const savedState = localStorage.getItem('articleGenerating');
+    return savedState === 'true';
+  });
   const [selectedTopic, setSelectedTopic] = useState('');
   // Removed: generatedArticle state (using background generation)
   const [apiConnected, setApiConnected] = useState<boolean | null>(null);
   
+  // Scheduler state
+  const [schedulerStatus, setSchedulerStatus] = useState<any>(null);
+  const [isTestingScheduler, setIsTestingScheduler] = useState(false);
+  
   // Generation input state
-  const [inputType, setInputType] = useState('topic'); // 'topic', 'brief', 'keywords'
-  const [customBrief, setCustomBrief] = useState('');
-  const [keywordList, setKeywordList] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Articles state
@@ -108,6 +113,29 @@ const AdminDashboard: React.FC = React.memo(() => {
   
   // Generation status state
   const [generationStatus, setGenerationStatus] = useState<'generating' | 'formatting' | 'metadata' | null>(null);
+
+  // Helper function to update generation state persistently
+  const updateGeneratingState = useCallback((generating: boolean) => {
+    setIsGenerating(generating);
+    if (generating) {
+      localStorage.setItem('articleGenerating', 'true');
+    } else {
+      localStorage.removeItem('articleGenerating');
+      localStorage.removeItem('generationJobId');
+      localStorage.removeItem('generationStartTime');
+    }
+  }, []);
+
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (showNotification) {
+      const timer = setTimeout(() => {
+        setShowNotification(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showNotification]);
 
   // Memoize parsed topics array to prevent unnecessary re-renders
   const topicsArray = useMemo(() => {
@@ -141,7 +169,24 @@ const AdminDashboard: React.FC = React.memo(() => {
       }
     };
     
+    // Load scheduler status
+    const loadSchedulerStatus = async () => {
+      const apiUrl = import.meta.env.API_URL;
+      if (!apiUrl) return;
+      
+      try {
+        const response = await fetch(`${apiUrl}/scheduler/status`);
+        if (response.ok) {
+          const data = await response.json();
+          setSchedulerStatus(data);
+        }
+      } catch (error) {
+        console.error('Failed to load scheduler status:', error);
+      }
+    };
+    
     testOpenAIConnection();
+    loadSchedulerStatus();
     
     // Load settings from database
     loadSettings().then(settings => {
@@ -233,6 +278,16 @@ const AdminDashboard: React.FC = React.memo(() => {
         brand_pillars: brandPillars
       });
       
+      // Reload scheduler status
+      const apiUrl = import.meta.env.API_URL;
+      if (apiUrl) {
+        const response = await fetch(`${apiUrl}/scheduler/status`);
+        if (response.ok) {
+          const data = await response.json();
+          setSchedulerStatus(data);
+        }
+      }
+      
       toast({
         title: 'Settings Saved',
         description: 'Your AI generation settings have been saved successfully.',
@@ -247,58 +302,177 @@ const AdminDashboard: React.FC = React.memo(() => {
     }
   };
 
+  const handleTestScheduler = async () => {
+    const apiUrl = import.meta.env.API_URL;
+    if (!apiUrl) {
+      toast({
+        title: 'Backend Not Configured',
+        description: 'Backend API is not configured.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsTestingScheduler(true);
+    
+    try {
+      const response = await fetch(`${apiUrl}/scheduler/trigger`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to trigger scheduler');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: 'Scheduler Triggered!',
+        description: data.message,
+      });
+    } catch (error) {
+      console.error('Error triggering scheduler:', error);
+      toast({
+        title: 'Trigger Failed',
+        description: 'Failed to trigger scheduler.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingScheduler(false);
+    }
+  };
+
+  // Polling function that can be used for both new and resumed generations
+  const startPolling = useCallback((jobId: string, startTime: number, initialArticleCount: number) => {
+    const maxDuration = 600000; // 10 minutes
+    let pollCount = 0;
+    const maxPolls = 60; // Poll for up to 10 minutes (60 * 10 seconds)
+    
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+      
+      // Check if we've exceeded max duration
+      if (Date.now() - startTime >= maxDuration) {
+        clearInterval(pollInterval);
+        updateGeneratingState(false);
+        setGenerationStatus(null);
+        setNotificationMessage('Generation taking longer than expected. Please check back in a few minutes.');
+        setShowNotification(true);
+        return;
+      }
+      
+      // Fetch generation status
+      const apiUrl = import.meta.env.API_URL;
+      try {
+        const statusResponse = await fetch(`${apiUrl}/articles/status/${jobId}`);
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          
+          // Check for error status
+          if (statusData.step === 'error') {
+            clearInterval(pollInterval);
+            updateGeneratingState(false);
+            setGenerationStatus(null);
+            toast({
+              title: 'Generation Failed',
+              description: statusData.message || 'Article generation failed. Please try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          
+          setGenerationStatus(statusData.step);
+        }
+      } catch (err) {
+        console.log('Status check failed:', err);
+      }
+      
+      // Fetch latest articles
+      const response = await fetch(`${apiUrl}/articles`);
+      const latestArticles = await response.json();
+      
+      // Check if a new article was added
+      if (latestArticles.length > initialArticleCount) {
+        clearInterval(pollInterval);
+        updateGeneratingState(false);
+        setGenerationStatus(null);
+        setArticles(latestArticles);
+        setNotificationMessage('Article Published! ✨ Your new article is now live.');
+        setShowNotification(true);
+        return;
+      }
+      
+      // Update articles list
+      setArticles(latestArticles);
+      
+      // Stop polling after max attempts
+      if (pollCount >= maxPolls) {
+        clearInterval(pollInterval);
+        updateGeneratingState(false);
+        setGenerationStatus(null);
+        setNotificationMessage('Generation taking longer than expected. Please check back in a few minutes.');
+        setShowNotification(true);
+      }
+    }, 10000); // Poll every 10 seconds
+    
+    // Store interval ID for cleanup
+    return pollInterval;
+  }, [toast, updateGeneratingState]);
+
+  // Resume polling function (used on page reload)
+  const resumePolling = useCallback((jobId: string, elapsed: number) => {
+    const startTime = Date.now() - elapsed;
+    const initialArticleCount = articles.length;
+    startPolling(jobId, startTime, initialArticleCount);
+  }, [articles.length, startPolling]);
+
+  // Resume polling if generation was in progress (page reload/navigation)
+  useEffect(() => {
+    const jobId = localStorage.getItem('generationJobId');
+    const startTime = localStorage.getItem('generationStartTime');
+    
+    if (isGenerating && jobId && startTime) {
+      const elapsed = Date.now() - parseInt(startTime);
+      const maxDuration = 600000; // 10 minutes
+      
+      // If less than 10 minutes have passed, resume polling
+      if (elapsed < maxDuration) {
+        console.log('Resuming article generation polling...');
+        resumePolling(jobId, elapsed);
+      } else {
+        // Generation timed out
+        console.log('Generation timed out, resetting state');
+        updateGeneratingState(false);
+        setGenerationStatus(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount - only dependencies are stable
+
   const handleGenerateArticle = useCallback(async () => {
     // API key check removed - handled by backend
-    setIsGenerating(true);
+    updateGeneratingState(true);
 
     try {
-      let params: any = {
-        inputType: inputType,
+      // Check if topics are available
+      if (topicsArray.length === 0) {
+        toast({
+          title: 'No Topics Available',
+          description: 'Please add topics in AI Settings before generating articles.',
+          variant: 'destructive',
+        });
+        updateGeneratingState(false);
+        return;
+      }
+      
+      // Select topic (use selected or random)
+      const topic = selectedTopic || topicsArray[Math.floor(Math.random() * topicsArray.length)];
+      
+      const params = {
+        inputType: 'topic',
+        topic: topic,
         featured: isFeatured
       };
-      
-      switch (inputType) {
-        case 'brief':
-          if (!customBrief.trim()) {
-            toast({
-              title: 'Brief Required',
-              description: 'Please enter a custom brief.',
-              variant: 'destructive',
-            });
-            setIsGenerating(false);
-            return;
-          }
-          params.customBrief = customBrief;
-          break;
-          
-        case 'keywords':
-          if (!keywordList.trim()) {
-            toast({
-              title: 'Keywords Required',
-              description: 'Please enter target keywords.',
-              variant: 'destructive',
-            });
-            setIsGenerating(false);
-            return;
-          }
-          params.keywordList = keywordList;
-          break;
-          
-        case 'topic':
-        default:
-          if (topicsArray.length === 0) {
-            toast({
-              title: 'No Topics Available',
-              description: 'Please add topics in AI Settings before generating articles.',
-              variant: 'destructive',
-            });
-            setIsGenerating(false);
-            return;
-          }
-          const topic = selectedTopic || topicsArray[Math.floor(Math.random() * topicsArray.length)];
-          params.topic = topic;
-          break;
-      }
       
       // Call backend to generate in background
       const apiUrl = import.meta.env.API_URL;
@@ -313,6 +487,11 @@ const AdminDashboard: React.FC = React.memo(() => {
       const data = await response.json();
       const jobId = data.jobId;
       
+      // Save generation state to localStorage
+      const startTime = Date.now();
+      localStorage.setItem('generationJobId', jobId);
+      localStorage.setItem('generationStartTime', startTime.toString());
+      
       // Show simple notification
       setNotificationMessage('Article generation started! Your article will be published within the next 5-10 minutes.');
       setShowNotification(true);
@@ -320,60 +499,9 @@ const AdminDashboard: React.FC = React.memo(() => {
       // Set initial status
       setGenerationStatus('generating');
 
-      // Keep button disabled and poll for status updates
+      // Start polling
       const initialArticleCount = articles.length;
-      let pollCount = 0;
-      const maxPolls = 60; // Poll for up to 10 minutes (60 * 10 seconds)
-      
-      const pollInterval = setInterval(async () => {
-        pollCount++;
-        
-        // Fetch generation status
-        const apiUrl = import.meta.env.API_URL;
-        try {
-          const statusResponse = await fetch(`${apiUrl}/articles/status/${jobId}`);
-          if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
-            setGenerationStatus(statusData.step);
-          }
-        } catch (err) {
-          console.log('Status check failed:', err);
-        }
-        
-        // Fetch latest articles
-        const response = await fetch(`${apiUrl}/articles`);
-        const latestArticles = await response.json();
-        
-        // Check if a new article was added
-        if (latestArticles.length > initialArticleCount) {
-          clearInterval(pollInterval);
-          setIsGenerating(false);
-          setGenerationStatus(null);
-          setArticles(latestArticles);
-          setNotificationMessage('Article Published! ✨ Your new article is now live.');
-          setShowNotification(true);
-          return;
-        }
-        
-        // Update articles list
-        setArticles(latestArticles);
-        
-        // Stop polling after max attempts
-        if (pollCount >= maxPolls) {
-          clearInterval(pollInterval);
-          setIsGenerating(false);
-          setGenerationStatus(null);
-          setNotificationMessage('Generation taking longer than expected. Please check back in a few minutes.');
-          setShowNotification(true);
-        }
-      }, 10000); // Poll every 10 seconds
-      
-      // Also stop generating state after 10 minutes regardless
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        setIsGenerating(false);
-        setGenerationStatus(null);
-      }, 600000); // 10 minutes
+      startPolling(jobId, startTime, initialArticleCount);
       
     } catch (error: any) {
       console.error('Generation error:', error);
@@ -382,32 +510,10 @@ const AdminDashboard: React.FC = React.memo(() => {
         description: error.message || 'Failed to start article generation.',
         variant: 'destructive',
       });
-      setIsGenerating(false);
+      updateGeneratingState(false);
     }
-  }, [inputType, customBrief, keywordList, topicsArray, selectedTopic, isFeatured, toast, loadArticles]);
+  }, [topicsArray, selectedTopic, isFeatured, toast, articles.length, updateGeneratingState, startPolling]);
 
-  const handleGenerateTopics = async () => {
-    try {
-      toast({
-        title: 'Generating Topics',
-        description: 'Creating new topic ideas...',
-      });
-
-      const newTopics = await generateTopicIdeas();
-      setTopics(newTopics.join(', '));
-      
-      toast({
-        title: 'Topics Generated!',
-        description: `Generated ${newTopics.length} new topic ideas.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Failed to Generate Topics',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
 
   const addTopic = () => {
     if (newTopic.trim()) {
@@ -458,61 +564,6 @@ const AdminDashboard: React.FC = React.memo(() => {
     }
   }, [toast]);
 
-  const handleImproveArticle = useCallback(async (articleId: number) => {
-    // Placeholder for future AI improvement feature
-    toast({
-      title: 'Coming Soon',
-      description: 'AI article improvement feature will be available soon.',
-    });
-  }, [toast]);
-
-  const handlePublishArticle = useCallback(async (articleId: number) => {
-    const apiUrl = import.meta.env.API_URL;
-    
-    if (!apiUrl) {
-      toast({
-        title: 'Backend Not Configured',
-        description: 'Backend API is not configured.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      const response = await fetch(`${apiUrl}/articles/${articleId}`, { 
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          status: 'published', 
-          date_published: new Date().toISOString() 
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to publish article');
-      }
-      
-      const updatedArticle = await response.json();
-      
-      // Update local state
-      setArticles(prev => prev.map(article => 
-        article.id === articleId ? updatedArticle : article
-      ));
-      
-      toast({
-        title: 'Article Published',
-        description: 'The article has been published successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Publish Failed',
-        description: 'Failed to publish article to database.',
-        variant: 'destructive',
-      });
-    }
-  }, [toast]);
 
   const getStatusBadgeColor = useCallback((status: string) => {
     switch (status) {
@@ -561,22 +612,9 @@ const AdminDashboard: React.FC = React.memo(() => {
       {/* Header - Added pt-20 to prevent navbar overlap */}
       <div className="bg-gradient-to-br from-black via-slate-900 to-slate-800 py-12 pt-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-light text-white mb-2">Admin Dashboard</h1>
-              <p className="text-slate-300 text-lg">Manage your blog content and AI generation settings</p>
-            </div>
-            {/* Test notification button */}
-            <button
-              onClick={() => {
-                console.log('Test button clicked!');
-                setNotificationMessage('Test notification - this is working!');
-                setShowNotification(true);
-              }}
-              className="bg-white text-black px-4 py-2 rounded-lg hover:bg-slate-200 transition-none"
-            >
-              Test Notification
-            </button>
+          <div>
+            <h1 className="text-4xl font-light text-white mb-2">Admin Dashboard</h1>
+            <p className="text-slate-300 text-lg">Manage your blog content and AI generation settings</p>
           </div>
         </div>
       </div>
@@ -681,6 +719,69 @@ const AdminDashboard: React.FC = React.memo(() => {
                     />
                   </div>
                 </div>
+                
+                {/* Scheduler Status Banner */}
+                {schedulerStatus && (
+                  <div className={`mt-4 p-4 rounded-lg border-2 ${
+                    schedulerStatus.active && autoGenerate 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {schedulerStatus.active && autoGenerate ? (
+                          <>
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <div>
+                              <p className="text-sm font-medium text-green-900">
+                                Scheduler Active
+                              </p>
+                              <p className="text-xs text-green-700 mt-1">
+                                Next run: {schedulerStatus.nextRun}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-5 w-5 text-slate-500" />
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">
+                                Scheduler Inactive
+                              </p>
+                              <p className="text-xs text-slate-600 mt-1">
+                                {!autoGenerate 
+                                  ? 'Enable Automatic Generation to activate' 
+                                  : 'Configure settings and save to activate'}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      {schedulerStatus.active && (
+                        <Button
+                          onClick={handleTestScheduler}
+                          disabled={isTestingScheduler}
+                          variant="outline"
+                          size="sm"
+                          className="border-green-200 text-green-700 hover:bg-green-100 transition-none"
+                        >
+                          {isTestingScheduler ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Testing...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Test Now
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {/* Daily - Frequency and Time */}
@@ -693,7 +794,7 @@ const AdminDashboard: React.FC = React.memo(() => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AI_SETTINGS.FREQUENCY_OPTIONS.map((option) => (
+                          {FREQUENCY_OPTIONS.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -703,7 +804,9 @@ const AdminDashboard: React.FC = React.memo(() => {
                     </div>
 
                     <div className="flex-1 space-y-2">
-                      <Label htmlFor="time">Time</Label>
+                      <Label htmlFor="time" className="flex items-center gap-2">
+                        Time <span className="text-xs text-slate-500 font-normal">(CST)</span>
+                      </Label>
                       <Input
                         id="time"
                         type="time"
@@ -724,7 +827,7 @@ const AdminDashboard: React.FC = React.memo(() => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AI_SETTINGS.FREQUENCY_OPTIONS.map((option) => (
+                          {FREQUENCY_OPTIONS.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -752,7 +855,9 @@ const AdminDashboard: React.FC = React.memo(() => {
                     </div>
 
                     <div className="flex-1 space-y-2">
-                      <Label htmlFor="time">Time</Label>
+                      <Label htmlFor="time" className="flex items-center gap-2">
+                        Time <span className="text-xs text-slate-500 font-normal">(CST)</span>
+                      </Label>
                       <Input
                         id="time"
                         type="time"
@@ -773,7 +878,7 @@ const AdminDashboard: React.FC = React.memo(() => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AI_SETTINGS.FREQUENCY_OPTIONS.map((option) => (
+                          {FREQUENCY_OPTIONS.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -796,7 +901,9 @@ const AdminDashboard: React.FC = React.memo(() => {
                     </div>
 
                     <div className="flex-1 space-y-2">
-                      <Label htmlFor="time">Time</Label>
+                      <Label htmlFor="time" className="flex items-center gap-2">
+                        Time <span className="text-xs text-slate-500 font-normal">(CST)</span>
+                      </Label>
                       <Input
                         id="time"
                         type="time"
@@ -868,42 +975,11 @@ const AdminDashboard: React.FC = React.memo(() => {
                 <CardDescription>Use AI to automatically create a new blog article</CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Grid Layout */}
+                {/* Simple Layout */}
                 <div className="space-y-6">
-                  {/* Top Row - Input Type, AI Model, Featured */}
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {/* Input Type */}
-                    <div className="space-y-2">
-                      <Label htmlFor="input-type">Input Type</Label>
-                      <Select value={inputType} onValueChange={setInputType}>
-                        <SelectTrigger id="input-type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="topic">Choose a Topic</SelectItem>
-                          <SelectItem value="brief">Custom Brief</SelectItem>
-                          <SelectItem value="keywords">Keyword List</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Featured Toggle */}
-                    <div className="space-y-2">
-                      <Label htmlFor="featured-toggle">Featured</Label>
-                      <div className="flex items-center gap-3 h-10">
-                        <Switch
-                          id="featured-toggle"
-                          checked={isFeatured}
-                          onCheckedChange={setIsFeatured}
-                          className="data-[state=checked]:bg-black"
-                        />
-                        <span className="text-sm text-slate-600">Highlight article</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Input Content */}
-                  {inputType === 'topic' && (
+                  {/* Top Row - Topic and Featured */}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Topic Selection */}
                     <div className="space-y-2">
                       <Label htmlFor="topic-select">Select Topic</Label>
                       <Select value={selectedTopic} onValueChange={setSelectedTopic}>
@@ -922,41 +998,21 @@ const AdminDashboard: React.FC = React.memo(() => {
                         Leave empty to randomly select from your configured topics
                       </p>
                     </div>
-                  )}
 
-                  {inputType === 'brief' && (
+                    {/* Featured Toggle */}
                     <div className="space-y-2">
-                      <Label htmlFor="custom-brief">Custom Brief</Label>
-                      <Textarea
-                        id="custom-brief"
-                        placeholder="Describe what you want the article to be about..."
-                        value={customBrief}
-                        onChange={(e) => setCustomBrief(e.target.value)}
-                        rows={10}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-slate-500">
-                        Provide detailed instructions for the AI to follow
-                      </p>
+                      <Label htmlFor="featured-toggle">Featured</Label>
+                      <div className="flex items-center gap-3 h-10">
+                        <Switch
+                          id="featured-toggle"
+                          checked={isFeatured}
+                          onCheckedChange={setIsFeatured}
+                          className="data-[state=checked]:bg-black"
+                        />
+                        <span className="text-sm text-slate-600">Highlight article</span>
+                      </div>
                     </div>
-                  )}
-
-                  {inputType === 'keywords' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="keyword-list">Keyword List</Label>
-                      <Textarea
-                        id="keyword-list"
-                        placeholder="Enter keywords separated by commas (e.g., startup, funding, growth, strategy)"
-                        value={keywordList}
-                        onChange={(e) => setKeywordList(e.target.value)}
-                        rows={10}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-slate-500">
-                        AI will create an article incorporating these keywords
-                      </p>
-                    </div>
-                  )}
+                  </div>
 
                   {/* Generate Button - At Bottom */}
                   <Button 
@@ -1044,7 +1100,20 @@ const AdminDashboard: React.FC = React.memo(() => {
                         className="border-2 border-slate-200 rounded-xl overflow-hidden"
                       >
                         <AccordionTrigger className="px-6 py-4 hover:bg-slate-50 hover:no-underline">
-                          <div className="flex items-start justify-between w-full pr-4">
+                          <div className="flex items-start justify-between w-full pr-4 gap-4">
+                            {/* Article Thumbnail */}
+                            {article.image_url && (
+                              <div className="flex-shrink-0">
+                                <div className="w-32 h-20 rounded-lg overflow-hidden bg-slate-900">
+                                  <img 
+                                    src={article.image_url} 
+                                    alt={article.image_alt || article.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            
                             <div className="flex-1 text-left space-y-2">
                               <div className="flex items-center gap-3 flex-wrap">
                                 <Badge className={getStatusBadgeColor(article.status)}>
@@ -1089,20 +1158,11 @@ const AdminDashboard: React.FC = React.memo(() => {
                             <div className="flex gap-3 pt-2">
                               <Button
                                 variant="outline"
-                                onClick={() => handlePublishArticle(article.id)}
-                                disabled={article.status !== 'draft'}
-                                className="flex-1 border-2 border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-none"
+                                onClick={() => window.open(`/articles/${article.url}`, '_blank')}
+                                className="flex-1 border-2 border-slate-200 text-slate-700 hover:bg-slate-50 transition-none"
                               >
-                                <Send className="h-4 w-4 mr-2" />
-                                Publish
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => handleImproveArticle(article.id)}
-                                className="flex-1 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 transition-none"
-                              >
-                                <Wand2 className="h-4 w-4 mr-2" />
-                                Improve
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Article
                               </Button>
                               <Button
                                 variant="outline"

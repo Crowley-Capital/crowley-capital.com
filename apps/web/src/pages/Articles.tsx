@@ -19,6 +19,8 @@ interface Article {
   featured: boolean;
   status: string;
   read_time: string | null;
+  image_url: string | null;
+  image_alt: string | null;
 }
 
 const Articles = () => {
@@ -193,6 +195,16 @@ const Articles = () => {
                     to={`/articles/${article.url}`}
                     className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-200"
                   >
+                    {/* Hero Image */}
+                    {article.image_url && (
+                      <div className="relative h-64 overflow-hidden bg-slate-900">
+                        <img 
+                          src={article.image_url} 
+                          alt={article.image_alt || article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
                     <div className="p-8">
                       <div className="flex items-center gap-3 mb-4">
                         {article.topic && (
@@ -251,6 +263,16 @@ const Articles = () => {
                     to={`/articles/${article.url}`}
                     className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-slate-200"
                   >
+                    {/* Hero Image */}
+                    {article.image_url && (
+                      <div className="relative h-48 overflow-hidden bg-slate-900">
+                        <img 
+                          src={article.image_url} 
+                          alt={article.image_alt || article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
                     <div className="p-6">
                       {article.topic && (
                         <div className="flex items-center gap-2 mb-3">

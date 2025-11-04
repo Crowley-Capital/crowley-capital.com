@@ -49,18 +49,12 @@ const CCVNavbar = () => {
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-[background-color,border-color,box-shadow] duration-500 ${
-        isScrolled 
-          ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-lg' 
-          : 'bg-transparent'
-      }`}>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-lg transition-all duration-500">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-3 cursor-pointer hover:scale-105 transition-transform" onClick={handleLogoClick}>
-              <CCVLogo size="sm" variant={isScrolled ? 'dark' : 'light'} />
-              <span className={`text-lg font-semibold tracking-tight hidden sm:block transition-colors ${
-                isScrolled ? 'text-black' : 'text-white'
-              }`}>
+              <CCVLogo size="sm" variant="dark" />
+              <span className="text-lg font-semibold tracking-tight hidden sm:block text-black">
                 Crowley Capital
               </span>
             </div>
@@ -69,41 +63,25 @@ const CCVNavbar = () => {
             <nav className="hidden md:flex items-center gap-8">
               <button 
                 onClick={() => scrollToSection('about')}
-                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
-                  isScrolled 
-                    ? 'text-slate-700 hover:text-black' 
-                    : 'text-white/90 hover:text-white'
-                }`}
+                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
               >
                 About
               </button>
               <button 
                 onClick={() => scrollToSection('offerings')}
-                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
-                  isScrolled 
-                    ? 'text-slate-700 hover:text-black' 
-                    : 'text-white/90 hover:text-white'
-                }`}
+                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
               >
                 Services
               </button>
               <button 
                 onClick={() => scrollToSection('newsletter')}
-                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
-                  isScrolled 
-                    ? 'text-slate-700 hover:text-black' 
-                    : 'text-white/90 hover:text-white'
-                }`}
+                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
               >
                 Newsletter
               </button>
               <Link 
                 to="/articles"
-                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
-                  isScrolled 
-                    ? 'text-slate-700 hover:text-black' 
-                    : 'text-white/90 hover:text-white'
-                }`}
+                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
               >
                 Articles
               </Link>
@@ -117,14 +95,14 @@ const CCVNavbar = () => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-3 rounded-lg hover:bg-white/10 transition-colors"
+              className="md:hidden p-3 rounded-lg hover:bg-slate-100 transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {isMobileMenuOpen ? (
-                <X className={`h-6 w-6 ${isScrolled ? 'text-black' : 'text-white'}`} />
+                <X className="h-6 w-6 text-black" />
               ) : (
-                <Menu className={`h-6 w-6 ${isScrolled ? 'text-black' : 'text-white'}`} />
+                <Menu className="h-6 w-6 text-black" />
               )}
             </button>
           </div>

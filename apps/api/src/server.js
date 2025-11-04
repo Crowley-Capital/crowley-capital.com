@@ -4,6 +4,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import ArticleScheduler from './scheduler.js';
+import { getRichContentSections, buildBrandContext, getLengthGuidance, getFormattingPrompt } from './prompts.js';
+import { generateArticleImage } from './imageUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,6 +35,9 @@ pool.connect((err, client, release) => {
   console.log('✅ PostgreSQL connected successfully');
   release();
 });
+
+// Initialize Article Scheduler (after database is connected)
+let articleScheduler = null;
 
 // Middleware
 app.use(cors({
@@ -75,6 +81,38 @@ app.get('/api/openai/status', (req, res) => {
 });
 
 // ==================== SETTINGS ENDPOINTS ====================
+
+// GET /api/scheduler/status - Get scheduler status
+app.get('/api/scheduler/status', (req, res) => {
+  if (!articleScheduler) {
+    return res.json({
+      initialized: false,
+      active: false,
+      schedule: null,
+      nextRun: 'Scheduler not initialized'
+    });
+  }
+  
+  res.json(articleScheduler.getStatus());
+});
+
+// POST /api/scheduler/trigger - Manually trigger scheduled generation
+app.post('/api/scheduler/trigger', async (req, res) => {
+  if (!articleScheduler) {
+    return res.status(503).json({ error: 'Scheduler not initialized' });
+  }
+  
+  try {
+    // Trigger in background
+    articleScheduler.triggerManual();
+    res.json({ 
+      success: true, 
+      message: 'Manual generation triggered. Check articles in a few minutes.' 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to trigger manual generation', details: error.message });
+  }
+});
 
 app.get('/api/settings', async (req, res) => {
   try {
@@ -123,6 +161,12 @@ app.put('/api/settings', async (req, res) => {
     `;
     
     const result = await pool.query(query, [topics, schedule, auto, positioning || '', tone || '', brand_pillars || '']);
+    
+    // Reload scheduler with new settings
+    if (articleScheduler) {
+      await articleScheduler.reloadSettings();
+    }
+    
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error saving settings:', err);
@@ -208,143 +252,7 @@ async function generateArticleInBackground(params, jobId) {
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
     
     // ========== RANDOMLY SELECT 2 RICH CONTENT SECTIONS ==========
-    const availableSections = [
-      {
-        name: 'PROS_CONS',
-        contentInstructions: `PROS & CONS TABLE:
-   - Present as a clear comparison table
-   - List 5-7 pros and 5-7 cons
-   - Be balanced and honest
-   - Include brief explanations for each point`,
-        formatInstructions: `PROS & CONS (always as table):
-   <div class="pros-cons-section">
-     <h2>Pros & Cons</h2>
-     <table class="pros-cons-table">
-       <thead>
-         <tr>
-           <th class="pros-header">✅ Pros</th>
-           <th class="cons-header">❌ Cons</th>
-         </tr>
-       </thead>
-       <tbody>
-         <tr>
-           <td class="pros-cell">
-             <strong>Pro Title</strong>
-             <span class="text-slate-600">Explanation...</span>
-           </td>
-           <td class="cons-cell">
-             <strong>Con Title</strong>
-             <span class="text-slate-600">Explanation...</span>
-           </td>
-         </tr>
-       </tbody>
-     </table>
-   </div>`
-      },
-      {
-        name: 'ALTERNATIVES',
-        contentInstructions: `ALTERNATIVES SECTION:
-   - List 3-5 alternative solutions/approaches
-   - Brief description of each (2-3 sentences)
-   - When to use each alternative`,
-        formatInstructions: `ALTERNATIVES:
-   <div class="alternatives-section">
-     <h2>Alternatives to Consider</h2>
-     <div class="alternative-card">
-       <h3>🔄 Alternative Name</h3>
-       <p class="text-slate-700">Description...</p>
-       <p class="text-slate-600 text-sm"><strong>Best for:</strong> When to use this...</p>
-     </div>
-   </div>`
-      },
-      {
-        name: 'COMMON_MISTAKES',
-        contentInstructions: `COMMON MISTAKES SECTION:
-   - List 5-7 critical mistakes to avoid
-   - Use warning/alert formatting
-   - Explain why each is a mistake
-   - Provide the correct approach`,
-        formatInstructions: `COMMON MISTAKES (alarming with warning icons):
-   <div class="mistakes-section">
-     <h2>⚠️ Common Mistakes to Avoid</h2>
-     <div class="mistake-card warning-card">
-       <div class="mistake-icon">❌</div>
-       <div class="mistake-content">
-         <h3 class="mistake-title">Mistake Title</h3>
-         <p class="mistake-description">Why this is wrong...</p>
-         <div class="mistake-solution">
-           <strong>✅ Instead:</strong> The correct approach...
-         </div>
-       </div>
-     </div>
-   </div>`
-      },
-      {
-        name: 'TROUBLESHOOTING',
-        contentInstructions: `TROUBLESHOOTING SECTION:
-   - Problem/solution format
-   - 5-7 common issues
-   - Step-by-step solutions`,
-        formatInstructions: `TROUBLESHOOTING:
-   <div class="troubleshooting-section">
-     <h2>🔧 Troubleshooting Guide</h2>
-     <div class="troubleshooting-item">
-       <h3 class="problem-title">🚨 Problem: [Issue]</h3>
-       <div class="solution-content">
-         <p><strong>Solution:</strong></p>
-         <ol class="solution-steps">
-           <li>Step 1...</li>
-           <li>Step 2...</li>
-         </ol>
-       </div>
-     </div>
-   </div>`
-      },
-      {
-        name: 'EXAMPLES',
-        contentInstructions: `EXAMPLES SECTION:
-   - 2-3 detailed real-world examples
-   - Walk through each example step-by-step
-   - Include outcomes/results`,
-        formatInstructions: `EXAMPLES:
-   <div class="examples-section">
-     <h2>💡 Real-World Examples</h2>
-     <div class="example-card">
-       <h3>Example 1: [Title]</h3>
-       <p class="example-context"><strong>Context:</strong> ...</p>
-       <p class="example-approach"><strong>Approach:</strong> ...</p>
-       <p class="example-outcome"><strong>Outcome:</strong> ...</p>
-     </div>
-   </div>`
-      },
-      {
-        name: 'CHECKLIST',
-        contentInstructions: `CHECKLIST SECTION:
-   - Actionable checklist format
-   - 10-15 items to check/complete
-   - Organized by phase or category
-   - Keep items SHORT and ACTION-ORIENTED (6-10 words max)
-   - Use strong action verbs (Create, Review, Set up, Test, etc.)`,
-        formatInstructions: `CHECKLIST:
-   <div class="checklist-section">
-     <h2>✅ Action Checklist</h2>
-     <div class="checklist-category">
-       <h3>Phase 1: [Category]</h3>
-           <label>
-             <input type="checkbox"> <span>Concise, actionable item</span>
-           </label>
-     </div>
-   </div>
-   
-   CHECKLIST REQUIREMENTS:
-   - Keep items SHORT and ACTION-ORIENTED (6-10 words max)
-   - Use strong action verbs (Create, Review, Set up, Test, etc.)
-   - Make items specific and measurable
-   - Organize by logical phases/categories (3-4 categories)
-   - 10-15 total items across all categories
-   - Each item should be independently completable`
-      }
-    ];
+    const availableSections = getRichContentSections();
     
     // Randomly select 2 sections
     const shuffled = availableSections.sort(() => Math.random() - 0.5);
@@ -356,21 +264,7 @@ async function generateArticleInBackground(params, jobId) {
     const selectedFormatInstructions = selectedSections.map(s => s.formatInstructions).join('\n\n   ');
     
     // Build Brand Essence context for system prompt
-    let brandContext = 'You are an expert content writer for Crowley Capital, creating high-quality, informative content for startup founders.';
-    
-    if (brandEssence.positioning) {
-      brandContext += `\n\nBRAND POSITIONING:\n${brandEssence.positioning}`;
-    }
-    
-    if (brandEssence.tone) {
-      brandContext += `\n\nTONE & STYLE:\n${brandEssence.tone}`;
-    }
-    
-    if (brandEssence.brand_pillars) {
-      brandContext += `\n\nBRAND PILLARS:\n${brandEssence.brand_pillars}`;
-    }
-    
-    brandContext += `\n\nIMPORTANT: Focus on the LATEST and MOST UP-TO-DATE information. Use current trends, recent data, and contemporary examples from ${currentDate} or recent months. Do NOT reference outdated information from years ago unless specifically relevant for historical context. Keep content fresh and relevant to today's startup ecosystem.`;
+    const brandContext = buildBrandContext(brandEssence, currentDate);
     
     // ========== STEP 1: CONTENT GENERATION ==========
     generationStatus.set(jobId, { step: 'generating', message: 'Step 1: Generating raw content...' });
@@ -382,36 +276,7 @@ async function generateArticleInBackground(params, jobId) {
     console.log(`🎯 Target article length: ${targetReadTime} min read (${targetWordCount} words)`);
     
     let contentPrompt = '';
-    const lengthGuidance = `\n\nIMPORTANT: This should be a COMPREHENSIVE, IN-DEPTH article of approximately ${targetWordCount} words (${targetReadTime}-minute read). 
-
-ARTICLE STRUCTURE REQUIREMENTS:
-1. START with a "Quick Answer" section (40-60 words):
-   - Lead with the DIRECT ANSWER/CONCLUSION first
-   - Make it self-contained and independently readable
-   - Match the primary search intent exactly
-   - Use people-first, natural language (not keyword-stuffed)
-   - This is CRITICAL for Google Featured Snippets and AI Overviews
-
-2. Then include comprehensive content with:
-   - Detailed explanations with multiple examples
-   - Multiple subsections for each main point
-   - Practical, actionable advice
-   - Real-world case studies or scenarios
-   - Step-by-step processes where applicable
-   - Expert tips and best practices
-
-3. Include these 2 RICH CONTENT SECTIONS (include BOTH of these and ONLY these):
-   
-   ${selectedContentInstructions}
-   
-   IMPORTANT: Include BOTH sections above. Do NOT add any other rich content sections.
-
-4. The body content MUST elaborate consistently on the Quick Answer:
-   - Expand on the same claims (no contradictions)
-   - Provide deeper context and evidence
-   - Maintain consistent messaging throughout
-
-Make this thorough and valuable - don't rush through topics.`;
+    const lengthGuidance = getLengthGuidance(targetWordCount, targetReadTime, selectedContentInstructions);
     
     if (params.inputType === 'brief') {
       contentPrompt = `Write a comprehensive, in-depth blog article based on this brief:\n\n${params.customBrief}\n\nFocus on the latest, most up-to-date information (${currentDate}). Provide the raw content with clear structure but no HTML formatting.${lengthGuidance}`;
@@ -463,65 +328,7 @@ Make this thorough and valuable - don't rush through topics.`;
     generationStatus.set(jobId, { step: 'formatting', message: 'Step 2: Formatting content...' });
     console.log(`🎨 Step 2: Formatting content with ${FORMATTER_MODEL}...`);
     
-    const formattingPrompt = `Take this article content and format it into clean, semantic HTML that matches the Crowley Capital design system.
-
-RAW CONTENT:
-${rawContent}
-
-FORMATTING REQUIREMENTS:
-1. Use semantic HTML5 tags
-2. Apply these exact CSS classes from our design system:
-   - Headings: Use font-light, text-black, tracking-tight
-   - H2: text-3xl mb-6 mt-12 pb-3 border-b border-slate-200
-   - H3: text-2xl mb-4 mt-8 font-medium
-   - Paragraphs: text-slate-700 leading-relaxed mb-6 text-lg font-light
-   - Lists: Use proper ul/ol with list-disc or list-decimal, space-y-3
-   - Links: text-black underline font-medium hover:text-slate-700
-   - Strong: text-black font-medium
-
-CRITICAL SPACING RULES:
-- NEVER use <br> or <br/> tags for spacing between sections, cards, or structural elements
-- ALL spacing between sections is handled by CSS (margin/padding classes)
-- ONLY use <br> inside paragraphs if you need a line break within the same thought
-- Do NOT add <br> after titles, before/after cards, between list items, or around any structural elements
-- Let CSS handle all vertical spacing - trust the design system
-
-3. Include a "Quick Answer" box at the start (CRITICAL for Google Featured Snippets & AI Overviews):
-   <div class="answer-box">
-     <h2>Quick Answer</h2>
-     <p>[Write ONE tight, self-contained passage of 40-60 words. Lead with the direct answer/conclusion FIRST, then support it. Match the primary search intent exactly. Be people-first, not keyword-stuffed. This must directly answer the main question. The body content below should elaborate on this same answer consistently without contradictions.]</p>
-   </div>
-   
-   QUICK ANSWER REQUIREMENTS:
-   - Exactly 40-60 words (tight and focused)
-   - Lead with the conclusion/answer FIRST
-   - Self-contained (can be read independently)
-   - Directly answers the primary question
-   - People-first language (natural, not robotic)
-   - Zero keyword stuffing
-   - Body content must expand on this consistently
-
-4. Include "Key Takeaways" section with bullet points
-
-5. For FAQ section, use accordion format (5 to 7 questions):
-   <div class="faq-accordion">
-     <details class="faq-item">
-       <summary class="faq-question">[Question]</summary>
-       <div class="faq-answer">
-         <p>[Answer]</p>
-       </div>
-     </details>
-   </div>
-
-6. RICH CONTENT SECTION FORMATTING (format ONLY these sections if they appear in the content):
-
-   ${selectedFormatInstructions}
-
-7. NO markdown code blocks (no \`\`\`html)
-8. Return ONLY the HTML content, nothing else
-9. Ensure proper spacing and readability
-
-Format the content now:`;
+    const formattingPrompt = getFormattingPrompt(rawContent, selectedFormatInstructions);
     
     // Try primary formatter model first, fallback if it fails
     let formattingCompletion;
@@ -581,6 +388,21 @@ Format the content now:`;
     // Generate slug
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     
+    // Check for duplicate URL before continuing (saves API costs)
+    console.log('🔍 Checking for duplicate URL:', slug);
+    const duplicateCheck = await pool.query('SELECT id FROM articles WHERE url = $1', [slug]);
+    if (duplicateCheck.rows.length > 0) {
+      const errorMessage = `Article with URL "${slug}" already exists. Please delete the existing article or choose a different topic.`;
+      console.error('❌', errorMessage);
+      generationStatus.set(jobId, { 
+        step: 'error', 
+        message: errorMessage,
+        error: 'DUPLICATE_URL'
+      });
+      throw new Error(errorMessage);
+    }
+    console.log('✅ URL is unique, continuing...');
+    
     // Generate excerpt
     const excerptCompletion = await openai.chat.completions.create({
       model: FORMATTER_MODEL,
@@ -599,14 +421,39 @@ Format the content now:`;
     
     console.log(`✅ Step 3 complete: Title: "${title}"`);
     
-    // ========== STEP 4: SAVE TO DATABASE ==========
-    console.log('💾 Step 4: Saving to database...');
+    // ========== STEP 4: GENERATE HERO IMAGE ==========
+    generationStatus.set(jobId, { step: 'image', message: 'Step 4: Generating hero image...' });
+    console.log('🎨 Step 4: Generating article hero image...');
+    
+    let imageUrl = null;
+    let imageAlt = null;
+    
+    try {
+      const imageResult = await generateArticleImage({
+        title,
+        description: excerpt,
+        slug,
+        quickAnswer: excerpt  // Use excerpt as quick answer
+      }, process.env.OPENAI_API_KEY);
+      
+      imageUrl = imageResult.imageUrl;
+      imageAlt = imageResult.imageAlt;
+      
+      console.log('✅ Step 4 complete: Hero image generated');
+    } catch (error) {
+      console.warn('⚠️ Image generation failed, continuing without image:', error.message);
+      // Continue without image - not critical
+    }
+    
+    // ========== STEP 5: SAVE TO DATABASE ==========
+    console.log('💾 Step 5: Saving to database...');
     const query = `
       INSERT INTO articles (
         title, description, article, url, meta_description, topic, 
-        author, publisher, status, featured, read_time, date_published, date_created, date_modified
+        author, publisher, status, featured, read_time, date_published, 
+        image_url, image_alt, date_created, date_modified
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *;
     `;
     
@@ -622,11 +469,16 @@ Format the content now:`;
       'published',
       params.featured || false,
       readTime,
-      new Date().toISOString()
+      new Date().toISOString(),
+      imageUrl,
+      imageAlt
     ]);
     
     console.log('✅ Article published successfully:', title);
-    console.log('🎉 2-step generation process complete!');
+    if (imageUrl) {
+      console.log(`📸 With hero image: ${imageUrl}`);
+    }
+    console.log('🎉 Full article generation process complete!');
     
     // Mark as complete
     generationStatus.set(jobId, { step: 'complete', message: 'Article published!' });
@@ -836,10 +688,15 @@ app.use((err, req, res, next) => {
 
 // ==================== START SERVER ====================
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`🚀 Backend API server running on http://localhost:${port}`);
   console.log(`📊 Health check: http://localhost:${port}/api/health`);
   console.log(`⚙️  Settings API: http://localhost:${port}/api/settings`);
   console.log(`📝 Articles API: http://localhost:${port}/api/articles`);
   console.log(`✨ Generate API (2-step): http://localhost:${port}/api/articles/generate`);
+  console.log(`🕐 Scheduler API: http://localhost:${port}/api/scheduler/status`);
+  
+  // Initialize scheduler after server starts
+  articleScheduler = new ArticleScheduler(pool, generateArticleInBackground);
+  await articleScheduler.initialize();
 });

@@ -200,9 +200,15 @@ npm start                # Production server
 
 ### Utility Scripts
 ```bash
-./scripts/dev.sh         # Start all dev servers
-./scripts/build.sh       # Build for production
+./scripts/dev.sh                        # Start all dev servers
+./scripts/build.sh                      # Build for production
+
+# Test Scripts
+node scripts/test-image-generation.js   # Test DALL-E image generation
+node scripts/image-generation-example.js # Simple image generation example
 ```
+
+See [scripts/README-IMAGE-TEST.md](scripts/README-IMAGE-TEST.md) for detailed image generation docs.
 
 ---
 

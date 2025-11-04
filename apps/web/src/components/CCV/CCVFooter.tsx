@@ -37,7 +37,7 @@ const CCVFooter = () => {
         <div className="grid md:grid-cols-4 gap-12 mb-16">
           <div className="md:col-span-2 space-y-8">
             <div className="flex items-center gap-4">
-              <CCVLogo size="md" variant="light" />
+              <CCVLogo size="md" variant="dark" />
               <div>
                 <h4 className="text-2xl font-semibold">Crowley Capital</h4>
                 <p className="text-slate-400">Strategy • Product • Capital</p>

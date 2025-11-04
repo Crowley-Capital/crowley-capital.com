@@ -4,15 +4,7 @@ services:
     name: crowley-capital
     env: node
     plan: starter
-    buildCommand: |
-      # Install all dependencies
-      npm install
-      cd apps/web && npm install
-      cd ../api && npm install
-      # Build frontend
-      cd ../web && npm run build
-      # Create images directory in backend
-      cd ../api && mkdir -p public/images/articles
+    buildCommand: npm install && cd apps/web && npm install && cd ../api && npm install && cd ../web && npm run build && cd ../api && mkdir -p public/images/articles
     startCommand: cd apps/api && npm start
     healthCheckPath: /health
     autoDeploy: true

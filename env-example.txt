@@ -15,10 +15,33 @@ FORMATTER_MODEL_FALLBACK=gpt-4o-mini
 
 # ==================== BACKEND ====================
 PORT=3001
+# For production on Render, use 10000 (Render's default)
+# PORT=10000
+
 FRONTEND_URL=https://your-domain.com
+NODE_ENV=development
 
 # ==================== FRONTEND ====================
-# These variables are prefixed with VITE_ to be accessible in the frontend
-VITE_API_URL=http://localhost:3001/api
-VITE_ADMIN_PASSWORD=your-admin-password-here
+# These variables are prefixed with API_ or ADMIN_ to be accessible in the frontend
+# (See vite.config.ts envPrefix setting)
+
+# For LOCAL DEVELOPMENT (separate frontend/backend):
+API_URL=http://localhost:3001/api
+
+# For PRODUCTION (single web service on Render):
+# API_URL=/api
+
+ADMIN_PASSWORD=your-admin-password-here
+
+# ==================== DEPLOYMENT OPTIONS ====================
+# 
+# Option A: Separate Services (Static Site + Web Service)
+# - Frontend: Static site on Render (free tier)
+# - Backend: Web service on Render (starter plan)
+# - Set API_URL=https://crowley-capital-api.onrender.com/api
+#
+# Option B: Single Web Service (recommended for simplicity)
+# - Combined: Everything on one web service (starter plan)
+# - Set API_URL=/api (relative URL)
+# - Backend serves the frontend build
 

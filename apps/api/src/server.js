@@ -677,8 +677,31 @@ app.delete('/api/articles/:id', async (req, res) => {
 
 // ==================== ERROR HANDLING ====================
 
+// ==================== SERVE FRONTEND (for single web service deployment) ====================
+
+// Serve static files from the frontend build
+const frontendPath = join(__dirname, '..', '..', 'web', 'dist');
+app.use(express.static(frontendPath));
+
+// Serve uploaded images
+app.use('/images', express.static(join(__dirname, '..', 'public', 'images')));
+
+// Catch-all route: serve index.html for client-side routing (must be AFTER API routes)
+app.get('*', (req, res, next) => {
+  // Only serve index.html for non-API routes
+  if (req.path.startsWith('/api/')) {
+    return next(); // Let the 404 handler deal with unknown API routes
+  }
+  res.sendFile(join(frontendPath, 'index.html'));
+});
+
+// 404 handler for API routes
 app.use((req, res) => {
-  res.status(404).json({ error: 'Endpoint not found' });
+  if (req.path.startsWith('/api/')) {
+    res.status(404).json({ error: 'Endpoint not found' });
+  } else {
+    res.status(404).send('Not Found');
+  }
 });
 
 app.use((err, req, res, next) => {

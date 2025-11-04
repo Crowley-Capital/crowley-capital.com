@@ -1,28 +1,18 @@
 services:
-  # Frontend - Static Site
+  # Combined Frontend + Backend - Single Web Service
   - type: web
-    name: crowley-capital-web
-    env: static
-    buildCommand: cd apps/web && npm install && npm run build
-    staticPublishPath: apps/web/dist
-    pullRequestPreviewsEnabled: true
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: X-XSS-Protection
-        value: 1; mode=block
-
-  # Backend - Node.js API
-  - type: web
-    name: crowley-capital-api
+    name: crowley-capital
     env: node
     plan: starter
-    buildCommand: cd apps/api && npm install
+    buildCommand: |
+      # Install all dependencies
+      npm install
+      cd apps/web && npm install
+      cd ../api && npm install
+      # Build frontend
+      cd ../web && npm run build
+      # Create images directory in backend
+      cd ../api && mkdir -p public/images/articles
     startCommand: cd apps/api && npm start
     healthCheckPath: /health
     autoDeploy: true
@@ -34,7 +24,9 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: PORT
-        value: 3001
+        value: 10000
+      - key: NODE_ENV
+        value: production
 
 # Database
 databases:

@@ -11,7 +11,7 @@
 import OpenAI from 'openai';
 import fetch from 'node-fetch';
 import sharp from 'sharp';
-import { writeFile, mkdir, unlink } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
@@ -224,59 +224,52 @@ async function optimizeImage(buffer) {
 }
 
 /**
- * Save image to cloud storage (R2) or local directory (fallback for development)
+ * Save image to cloud storage (R2) - uploads buffer directly, no temp files!
+ * 
+ * Production: ALWAYS uses R2 cloud storage (required)
+ * Development: Falls back to temp folder if R2 not configured
  */
 async function saveImage(buffer, filename) {
-  // Check if cloud storage is configured
+  // PRODUCTION: Cloud storage (R2) - Images persist forever
   if (isCloudStorageEnabled()) {
-    console.log('☁️  Using cloud storage (Cloudflare R2)...');
+    console.log('☁️  Using Cloudflare R2 cloud storage...');
     
     try {
-      // Save to temporary location first
-      const tempDir = join(__dirname, '..', 'temp');
-      if (!existsSync(tempDir)) {
-        await mkdir(tempDir, { recursive: true });
-      }
-      
-      const tempFilePath = join(tempDir, filename);
-      await writeFile(tempFilePath, buffer);
-      
-      // Upload to cloud storage
+      // Upload buffer directly to R2 (no temp files needed!)
       const storageKey = `articles/${filename}`;
-      const publicUrl = await uploadToCloud(tempFilePath, storageKey, 'image/jpeg');
-      
-      // Clean up temporary file
-      await unlink(tempFilePath);
+      const publicUrl = await uploadToCloud(buffer, storageKey, 'image/jpeg');
       
       console.log(`✅ Image uploaded to cloud: ${publicUrl}`);
       return publicUrl;
     } catch (error) {
       console.error('❌ Error uploading to cloud storage:', error.message);
-      console.log('   Falling back to local storage...');
-      // Fall through to local storage
+      throw new Error(`Cloud storage upload failed: ${error.message}`);
     }
   }
   
-  // LOCAL STORAGE (Development or fallback)
-  console.log('💾 Using local storage (ephemeral on Render)...');
+  // DEVELOPMENT ONLY: Local temp storage (ephemeral, for testing without R2)
+  console.warn('⚠️  WARNING: Cloud storage not configured!');
+  console.warn('   Images saved locally will be LOST on Render redeploys.');
+  console.warn('   Set up Cloudflare R2 for production!');
+  console.log('💾 Using temp storage for development...');
   
-  // Save to web app's public directory
-  const publicDir = join(__dirname, '..', '..', '..', 'apps', 'web', 'public', 'images', 'articles');
+  // Save to temp directory (not web public, to avoid confusion)
+  const tempDir = join(__dirname, '..', 'temp', 'articles');
   
-  // Create directory if it doesn't exist
-  if (!existsSync(publicDir)) {
-    await mkdir(publicDir, { recursive: true });
-    console.log(`📁 Created directory: ${publicDir}`);
+  if (!existsSync(tempDir)) {
+    await mkdir(tempDir, { recursive: true });
+    console.log(`📁 Created temp directory: ${tempDir}`);
   }
   
-  const filePath = join(publicDir, filename);
+  const filePath = join(tempDir, filename);
   
   try {
     await writeFile(filePath, buffer);
-    console.log(`✅ Image saved locally: ${filePath}`);
+    console.log(`✅ Image saved to temp: ${filePath}`);
+    console.warn('   ⚠️  This image will NOT persist in production!');
     
-    // Return the public URL path (relative)
-    return `/images/articles/${filename}`;
+    // Return a placeholder URL (won't work in production, but fine for dev)
+    return `/temp/articles/${filename}`;
   } catch (error) {
     console.error('❌ Error saving image:', error.message);
     throw new Error(`Image save failed: ${error.message}`);

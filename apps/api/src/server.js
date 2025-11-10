@@ -1,18 +1,20 @@
-import express from 'express';
-import pg from 'pg';
-import cors from 'cors';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import ArticleScheduler from './scheduler.js';
-import { getRichContentSections, buildBrandContext, getLengthGuidance, getFormattingPrompt } from './prompts.js';
-import { generateArticleImage } from './imageUtils.js';
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env from the root directory (three levels up from apps/api/src/)
+// Load .env from the root directory FIRST (before any other imports that need env vars)
 dotenv.config({ path: join(__dirname, '..', '..', '..', '.env') });
+
+// Now import everything else (after env vars are loaded)
+import express from 'express';
+import pg from 'pg';
+import cors from 'cors';
+import ArticleScheduler from './scheduler.js';
+import { getRichContentSections, buildBrandContext, getLengthGuidance, getFormattingPrompt } from './prompts.js';
+import { generateArticleImage } from './imageUtils.js';
 
 const { Pool } = pg;
 const app = express();
@@ -373,12 +375,40 @@ async function generateArticleInBackground(params, jobId) {
     generationStatus.set(jobId, { step: 'metadata', message: 'Step 3: Generating title and metadata...' });
     console.log('📌 Step 3: Generating title and metadata...');
     
-    // Generate title
+    // Generate title with variety
     const titleCompletion = await openai.chat.completions.create({
       model: FORMATTER_MODEL,
       messages: [
-        { role: 'system', content: 'You are a headline expert. Create compelling, SEO-friendly titles.' },
-        { role: 'user', content: `Generate ONE compelling title (50-70 characters) for an article about: ${params.topic || 'startup strategy'}. Return ONLY the title, nothing else.` }
+        { 
+          role: 'system', 
+          content: `You are a headline expert. Create compelling, SEO-friendly titles that feel natural and varied.
+
+CRITICAL - AVOID these overused patterns:
+- "Unlocking..." / "Unlock the..."
+- "Mastering..." / "Master the..."
+- "The Ultimate Guide to..."
+- "Everything You Need to Know About..."
+- "X Secrets to..." / "The Secret to..."
+- "[Number] Ways to..."
+- Starting with generic power words
+
+INSTEAD, use variety:
+- Direct, specific statements ("Why Startups Fail at Product-Market Fit")
+- Questions ("What Makes a Pitch Deck Actually Work?")
+- How-to with specificity ("How to Validate Your Startup Idea in 2 Weeks")
+- Contrarian takes ("Stop Looking for Product-Market Fit")
+- Problem-focused ("The Biggest Mistake Early-Stage Founders Make")
+- Comparative ("Y Combinator vs. Bootstrapping: Which Path is Right?")
+- Data-driven ("73% of Series A Pitches Fail Because of This")
+
+Make it feel like a real article title, not a template.`
+        },
+        { 
+          role: 'user', 
+          content: `Generate ONE compelling, natural-sounding title (50-70 characters) for an article about: ${params.topic || 'startup strategy'}. 
+
+Make it specific to the topic and avoid generic templates. Return ONLY the title, nothing else.` 
+        }
       ],
       max_completion_tokens: 100
     });
@@ -714,7 +744,7 @@ app.use((err, req, res, next) => {
 app.listen(port, async () => {
   console.log(`🚀 Backend API server running on http://localhost:${port}`);
   console.log(`📊 Health check: http://localhost:${port}/api/health`);
-  console.log(`⚙️  Settings API: http://localhost:${port}/api/settings`);
+  console.log(`⚙️ Settings API: http://localhost:${port}/api/settings`);
   console.log(`📝 Articles API: http://localhost:${port}/api/articles`);
   console.log(`✨ Generate API (2-step): http://localhost:${port}/api/articles/generate`);
   console.log(`🕐 Scheduler API: http://localhost:${port}/api/scheduler/status`);

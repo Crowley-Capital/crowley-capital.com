@@ -168,7 +168,7 @@ const CCVFooter = () => {
             </p>
             <div className="flex items-center gap-8">
               <a href="/admin" className="text-slate-400 hover:text-white transition-colors">Admin</a>
-              <a href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms</a>
+              <a href="/legal/linkedin-api-terms" className="text-slate-400 hover:text-white transition-colors">Terms</a>
               <a href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy</a>
               <a href="/press-kit" className="text-slate-400 hover:text-white transition-colors">Press Kit</a>
             </div>

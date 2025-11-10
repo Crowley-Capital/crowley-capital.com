@@ -1,5 +1,6 @@
 
 import React from 'react';
+import logoImage from '../../assets/logo.png';
 
 interface CCVLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -18,7 +19,7 @@ const CCVLogo = ({ size = 'md', variant = 'dark' }: CCVLogoProps) => {
 
   return (
     <img 
-      src="/logo.png" 
+      src={logoImage} 
       alt="Crowley Capital" 
       className={`${sizeClasses[size]} ${filterClass} object-contain`}
       style={{ 

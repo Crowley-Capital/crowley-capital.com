@@ -10,6 +10,7 @@ import CrowleyCapital from "./pages/CrowleyCapital";
 import Articles from "./pages/Articles";
 import ArticleDetail from "./pages/ArticleDetail";
 import Admin from "./pages/Admin";
+import LinkedInAPITerms from "./pages/LinkedInAPITerms";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 
 const queryClient = new QueryClient({
@@ -40,6 +41,7 @@ const App = () => {
                 <Route path="/articles" element={<Articles />} />
                 <Route path="/articles/:id" element={<ArticleDetail />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/legal/linkedin-api-terms" element={<LinkedInAPITerms />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

@@ -25,6 +25,9 @@ out/
 .DS_Store
 Thumbs.db
 
+# Vite cache
+.vite/
+
 # Logs
 logs
 *.log
@@ -36,6 +39,10 @@ yarn-error.log*
 *.tmp
 .cache/
 .temp/
+
+# Generated article images (stored in R2 cloud storage, not in repo)
+apps/web/public/images/articles/
+apps/api/temp/
 
 # Database
 *.db

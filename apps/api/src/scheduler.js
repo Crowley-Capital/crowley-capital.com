@@ -132,6 +132,17 @@ class ArticleScheduler {
       console.log('\n🤖 ===== SCHEDULED ARTICLE GENERATION =====');
       console.log(`Time: ${new Date().toISOString()}`);
       
+      // Check if current time is within active hours (7am-9pm CST)
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+      const hour = now.getHours();
+      const isActiveHours = hour >= 7 && hour < 21; // 7am (7) to 9pm (21)
+      
+      if (!isActiveHours) {
+        console.log(`⏸️  Outside active hours (7am-9pm CST). Current time: ${hour}:${now.getMinutes().toString().padStart(2, '0')} CST`);
+        console.log('   Skipping generation - service may be sleeping to save resources');
+        return;
+      }
+      
       // Load fresh settings to ensure auto is still enabled
       const settings = await this.loadSettings();
       
@@ -156,10 +167,12 @@ class ArticleScheduler {
       const params = {
         topic: randomTopic,
         inputType: 'topic',
-        featured: false // Scheduled articles are not featured by default
+        featured: false // Scheduled articles are NOT featured (no images, regular articles only)
       };
       
-      console.log('🚀 Starting article generation...');
+      console.log('🚀 Starting scheduled article generation...');
+      console.log(`   Featured: ${params.featured} (scheduled articles are always non-featured)`);
+      console.log(`   Image generation: Skipped (only featured articles get images)`);
       
       // Call the generation function (same as manual generation)
       await this.generateArticle(params, jobId);
@@ -267,9 +280,12 @@ class ArticleScheduler {
     
     if (!settings.auto) {
       this.stop();
-      console.log('⏸️  Automatic generation disabled. Scheduler stopped.');
+      console.log('⏸️  Automatic Generation toggle is OFF - Scheduler stopped');
+      console.log('   Articles will NOT be generated automatically');
       return;
     }
+    
+    console.log('✅ Automatic Generation toggle is ON - Scheduler will run');
     
     if (!settings.topics || settings.topics.length === 0) {
       this.stop();

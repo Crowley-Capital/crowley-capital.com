@@ -17,6 +17,19 @@ import CCVFooter from '@/components/CCV/CCVFooter';
 import { DEFAULT_TOPICS, FREQUENCY_OPTIONS } from '@/config/settings';
 import { saveSettings, loadSettings, toCronExpression, fromCronExpression } from '@/lib/db';
 
+// Generate time options from 7:00am to 9:00pm CST (1-hour intervals)
+const TIME_OPTIONS = (() => {
+  const options = [];
+  for (let hour = 7; hour <= 21; hour++) {
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    const ampm = hour < 12 ? 'am' : 'pm';
+    const value = `${hour.toString().padStart(2, '0')}:00`;
+    const label = hour === 12 ? `12:00 pm (CST)` : `${displayHour}:00 ${ampm} (CST)`;
+    options.push({ value, label });
+  }
+  return options;
+})();
+
 const AdminLogin: React.FC<{ onLogin: (password: string) => void }> = React.memo(({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -75,8 +88,22 @@ const AdminDashboard: React.FC = React.memo(() => {
   // Settings state
   const [frequency, setFrequency] = useState('weekly');
   const [day, setDay] = useState('monday');
-  const [time, setTime] = useState('09:00');
+  const DEFAULT_TIME = '09:00'; // Default: 9:00 am (CST)
+  const [time, setTime] = useState<string>(DEFAULT_TIME);
   const [autoGenerate, setAutoGenerate] = useState(true);
+  
+  // Helper to get display label for current time value
+  const getTimeLabel = (timeValue: string) => {
+    const option = TIME_OPTIONS.find(opt => opt.value === timeValue);
+    if (!option) return 'Select time';
+    
+    // Append "- Default" if it's the default value
+    if (timeValue === DEFAULT_TIME) {
+      return `${option.label} - Default`;
+    }
+    
+    return option.label;
+  };
   const [topics, setTopics] = useState(DEFAULT_TOPICS.join(', '));
   const [newTopic, setNewTopic] = useState('');
   
@@ -198,15 +225,32 @@ const AdminDashboard: React.FC = React.memo(() => {
         const parsed = fromCronExpression(settings.schedule);
         setFrequency(parsed.frequency);
         setDay(parsed.day);
-        setTime(parsed.time);
+        
+        // Validate and set time - ensure it's within allowed range (7am-9pm)
+        let loadedTime = parsed.time || DEFAULT_TIME;
+        const [hours, minutes] = loadedTime.split(':').map(Number);
+        const hourValue = hours || 0;
+        
+        // If time is outside allowed range (7am-9pm), reset to default
+        if (hourValue < 7 || hourValue >= 21) {
+          console.warn(`Loaded time ${loadedTime} is outside allowed range (7am-9pm CST). Resetting to default: ${DEFAULT_TIME}`);
+          loadedTime = DEFAULT_TIME;
+        }
+        
+        setTime(loadedTime);
         
         // Load Brand Essence fields
         if (settings.positioning) setPositioning(settings.positioning);
         if (settings.tone) setTone(settings.tone);
         if (settings.brand_pillars) setBrandPillars(settings.brand_pillars);
+      } else {
+        // No settings found - ensure default time is set
+        setTime(DEFAULT_TIME);
       }
     }).catch(error => {
       console.error('Error loading settings:', error);
+      // On error, ensure default time is set
+      setTime(DEFAULT_TIME);
     });
 
     // Load articles (mock data for now - will be replaced with API call)
@@ -265,8 +309,13 @@ const AdminDashboard: React.FC = React.memo(() => {
 
   const handleSaveSettings = async () => {
     try {
+      // Ensure time is set (fallback to default if empty)
+      const timeToSave = time || DEFAULT_TIME;
+      console.log(`💾 Saving settings with time: ${timeToSave} (${getTimeLabel(timeToSave)})`);
+      
       // Convert frequency/day/time to cron expression
-      const schedule = toCronExpression(frequency, day, time);
+      const schedule = toCronExpression(frequency, day, timeToSave);
+      console.log(`📅 Cron expression: ${schedule}`);
       
       // Save to database
       await saveSettings({
@@ -807,12 +856,25 @@ const AdminDashboard: React.FC = React.memo(() => {
                       <Label htmlFor="time" className="flex items-center gap-2">
                         Time <span className="text-xs text-slate-500 font-normal">(CST)</span>
                       </Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
-                      />
+                      <Select value={time || DEFAULT_TIME} onValueChange={setTime}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue>
+                            {(() => {
+                              const currentTime = time || DEFAULT_TIME;
+                              const option = TIME_OPTIONS.find(opt => opt.value === currentTime);
+                              if (!option) return '9:00 am (CST) - Default';
+                              return currentTime === DEFAULT_TIME ? `${option.label} - Default` : option.label;
+                            })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.value === DEFAULT_TIME ? `${option.label} - Default` : option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
@@ -858,12 +920,25 @@ const AdminDashboard: React.FC = React.memo(() => {
                       <Label htmlFor="time" className="flex items-center gap-2">
                         Time <span className="text-xs text-slate-500 font-normal">(CST)</span>
                       </Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
-                      />
+                      <Select value={time || DEFAULT_TIME} onValueChange={setTime}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue>
+                            {(() => {
+                              const currentTime = time || DEFAULT_TIME;
+                              const option = TIME_OPTIONS.find(opt => opt.value === currentTime);
+                              if (!option) return '9:00 am (CST) - Default';
+                              return currentTime === DEFAULT_TIME ? `${option.label} - Default` : option.label;
+                            })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.value === DEFAULT_TIME ? `${option.label} - Default` : option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
@@ -904,12 +979,25 @@ const AdminDashboard: React.FC = React.memo(() => {
                       <Label htmlFor="time" className="flex items-center gap-2">
                         Time <span className="text-xs text-slate-500 font-normal">(CST)</span>
                       </Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
-                      />
+                      <Select value={time || DEFAULT_TIME} onValueChange={setTime}>
+                        <SelectTrigger className="transition-none">
+                          <SelectValue>
+                            {(() => {
+                              const currentTime = time || DEFAULT_TIME;
+                              const option = TIME_OPTIONS.find(opt => opt.value === currentTime);
+                              if (!option) return '9:00 am (CST) - Default';
+                              return currentTime === DEFAULT_TIME ? `${option.label} - Default` : option.label;
+                            })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.value === DEFAULT_TIME ? `${option.label} - Default` : option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}

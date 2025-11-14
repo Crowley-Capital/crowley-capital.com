@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -76,7 +77,11 @@ if (isCloudStorageEnabled()) {
   console.warn('   Images will be saved locally (ephemeral on Render)');
 }
 
-// Health check endpoint
+// Health check endpoints (for Render health checks and monitoring)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Backend API is running' });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend API is running' });
 });
@@ -234,7 +239,11 @@ async function generateArticleInBackground(params, jobId) {
   generationStatus.set(jobId, { step: 'generating', message: 'Generating raw content...' });
   
   try {
+    const isScheduled = jobId.startsWith('scheduled-');
+    const articleType = isScheduled ? '🤖 SCHEDULED' : '✍️  MANUAL';
+    console.log(`\n${articleType} Article Generation`);
     console.log('🚀 Starting 2-step background article generation:', params);
+    console.log(`   Featured: ${params.featured || false} ${isScheduled ? '(scheduled articles are always non-featured)' : ''}`);
     
     // Load Brand Essence settings from database
     let brandEssence = {
@@ -844,4 +853,62 @@ app.listen(port, async () => {
   // Initialize scheduler after server starts
   articleScheduler = new ArticleScheduler(pool, generateArticleInBackground);
   await articleScheduler.initialize();
+  
+  // Keep service awake on Render during active hours only (7am-9pm CST)
+  // Self-ping every 10 minutes to ensure scheduler keeps running
+  // Note: Render Web Services sleep after 15 min of inactivity, which stops cron jobs
+  if (process.env.NODE_ENV === 'production') {
+    const keepAliveInterval = 10 * 60 * 1000; // 10 minutes (before 15 min sleep threshold)
+    
+    // Check if current time is within active hours (7am-9pm CST)
+    const isActiveHours = () => {
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+      const hour = now.getHours();
+      return hour >= 7 && hour < 21; // 7am (7) to 9pm (21)
+    };
+    
+    const performKeepAlive = () => {
+      if (!isActiveHours()) {
+        // Outside active hours - don't ping (service can sleep to save resources)
+        return;
+      }
+      
+      const options = {
+        hostname: 'localhost',
+        port: port,
+        path: '/health',
+        method: 'GET',
+        timeout: 5000
+      };
+      
+      const req = http.request(options, (res) => {
+        if (res.statusCode === 200) {
+          console.log('💓 Keep-alive ping successful (preventing service sleep)');
+        }
+      });
+      
+      req.on('error', () => {
+        // Silently fail - service might be starting up
+      });
+      
+      req.on('timeout', () => {
+        req.destroy();
+      });
+      
+      req.end();
+    };
+    
+    // Run immediately if in active hours
+    if (isActiveHours()) {
+      performKeepAlive();
+    }
+    
+    // Then run every 10 minutes
+    setInterval(performKeepAlive, keepAliveInterval);
+    
+    console.log('💓 Keep-alive mechanism enabled (active hours: 7am-9pm CST)');
+    console.log('   Pings every 10 minutes during active hours only');
+    console.log('   Service can sleep at night (9pm-7am CST) to save resources');
+    console.log('   ⚠️  Note: Scheduled articles will only generate during active hours');
+  }
 });

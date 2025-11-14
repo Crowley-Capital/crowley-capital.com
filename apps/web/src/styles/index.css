@@ -149,17 +149,17 @@
     @apply outline-none ring-2 ring-black ring-offset-2 ring-offset-background;
   }
   
-  /* Button interactions with microinteractions */
+  /* Button interactions - lightweight transitions only */
   button {
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
   }
   
   button:hover {
-    transform: translateY(-2px);
+    opacity: 0.9;
   }
   
   button:active {
-    transform: translateY(0);
+    opacity: 0.95;
   }
 }
 

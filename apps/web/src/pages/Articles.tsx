@@ -102,7 +102,17 @@ const Articles = () => {
     handleFilter();
   }, [searchTerm, selectedCategory]);
 
-  const featuredArticles = filteredArticles.filter(article => article.featured);
+  // Only show latest 3 featured articles, sorted by date (newest first)
+  const featuredArticles = filteredArticles
+    .filter(article => article.featured)
+    .sort((a, b) => {
+      const dateA = a.date_published ? new Date(a.date_published).getTime() : 0;
+      const dateB = b.date_published ? new Date(b.date_published).getTime() : 0;
+      return dateB - dateA; // Newest first
+    })
+    .slice(0, 3); // Limit to 3
+  
+  // Regular articles include all non-featured articles plus featured articles beyond the first 3
   const regularArticles = filteredArticles.filter(article => !article.featured);
 
   return (
@@ -188,14 +198,14 @@ const Articles = () => {
           {featuredArticles.length > 0 && (
             <section className="mb-20">
               <h2 className="text-4xl font-light text-slate-900 mb-10">Featured Articles</h2>
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {featuredArticles.map((article) => (
                   <Link 
                     key={article.id} 
                     to={`/articles/${article.url}`}
                     className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-200"
                   >
-                    {/* Hero Image */}
+                    {/* Hero Image - Only for Featured */}
                     {article.image_url && (
                       <div className="relative h-64 overflow-hidden bg-slate-900">
                         <img 
@@ -263,16 +273,7 @@ const Articles = () => {
                     to={`/articles/${article.url}`}
                     className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-slate-200"
                   >
-                    {/* Hero Image */}
-                    {article.image_url && (
-                      <div className="relative h-48 overflow-hidden bg-slate-900">
-                        <img 
-                          src={article.image_url} 
-                          alt={article.image_alt || article.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      </div>
-                    )}
+                    {/* No images for non-featured articles */}
                     <div className="p-6">
                       {article.topic && (
                         <div className="flex items-center gap-2 mb-3">

@@ -22,7 +22,7 @@ const CCVEcosystem = () => {
     <section id="ecosystem" className="py-20 px-6 lg:px-8 bg-stone-50">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-black mb-4">Ecosystem Projects</h2>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-light text-black mb-8 tracking-tight leading-tight">Ecosystem Projects</h2>
           <p className="text-xl text-stone-600 max-w-3xl mx-auto">
             Building the future of Austin's startup ecosystem
           </p>

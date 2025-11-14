@@ -99,14 +99,14 @@ const CCVBooking = () => {
             <Calendar className="h-12 w-12 text-white" />
           </div>
           <div className="space-y-4">
-            <h2 className="text-4xl md:text-5xl font-light text-black tracking-tight">
-              Ready to Build Smarter?
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-light text-black mb-8 tracking-tight leading-tight">
+              Engage with Our Capital Desk
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Book a 30-minute strategy session to discuss your product challenges and get immediate clarity on your next steps.
+              Schedule a confidential consultation to discuss capital requirements, strategic positioning, and partnership opportunities.
             </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-500 bg-slate-100 inline-block px-4 py-2 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               Usually responds within 2 hours
             </div>
           </div>

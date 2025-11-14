@@ -3,10 +3,10 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import CCVNavbar from '@/components/CCV/CCVNavbar';
 import CCVHero from '@/components/CCV/CCVHero';
-import CCVPainPoints from '@/components/CCV/CCVPainPoints';
-import CCVWhatWeOffer from '@/components/CCV/CCVWhatWeOffer';
+import CCVInvestmentFocus from '@/components/CCV/CCVInvestmentFocus';
 import CCVAbout from '@/components/CCV/CCVAbout';
 import CCVOfferings from '@/components/CCV/CCVOfferings';
+import CCVCapabilities from '@/components/CCV/CCVCapabilities';
 import CCVBooking from '@/components/CCV/CCVBooking';
 import CCVNewsletter from '@/components/CCV/CCVNewsletter';
 import CCVEvents from '@/components/CCV/CCVEvents';
@@ -32,10 +32,10 @@ const CrowleyCapital = () => {
       <CCVNavbar />
       <main>
         <CCVHero />
-        <CCVPainPoints />
-        <CCVWhatWeOffer />
-        <CCVAbout />
+        <CCVInvestmentFocus />
         <CCVOfferings />
+        <CCVAbout />
+        <CCVCapabilities />
         <CCVBooking />
         <CCVNewsletter />
         <CCVEvents />

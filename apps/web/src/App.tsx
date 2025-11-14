@@ -11,6 +11,8 @@ import Articles from "./pages/Articles";
 import ArticleDetail from "./pages/ArticleDetail";
 import Admin from "./pages/Admin";
 import LinkedInAPITerms from "./pages/LinkedInAPITerms";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 
 const queryClient = new QueryClient({
@@ -42,6 +44,8 @@ const App = () => {
                 <Route path="/articles/:id" element={<ArticleDetail />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/legal/linkedin-api-terms" element={<LinkedInAPITerms />} />
+                <Route path="/legal/terms-and-conditions" element={<TermsAndConditions />} />
+                <Route path="/legal/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

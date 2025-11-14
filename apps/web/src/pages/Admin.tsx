@@ -1009,7 +1009,7 @@ const AdminDashboard: React.FC = React.memo(() => {
                           onCheckedChange={setIsFeatured}
                           className="data-[state=checked]:bg-black"
                         />
-                        <span className="text-sm text-slate-600">Highlight article</span>
+                        <span className="text-sm text-slate-600">Generate image (featured only)</span>
                       </div>
                     </div>
                   </div>

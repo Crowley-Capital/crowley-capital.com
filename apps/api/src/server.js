@@ -15,6 +15,7 @@ import cors from 'cors';
 import ArticleScheduler from './scheduler.js';
 import { getRichContentSections, buildBrandContext, getLengthGuidance, getFormattingPrompt } from './prompts.js';
 import { generateArticleImage } from './imageUtils.js';
+import { isCloudStorageEnabled } from './cloudStorage.js';
 
 const { Pool } = pg;
 const app = express();
@@ -62,6 +63,18 @@ const FORMATTER_MODEL_FALLBACK = process.env.FORMATTER_MODEL_FALLBACK || 'gpt-4o
 console.log('🤖 AI Model Configuration:');
 console.log(`   Content Model: ${CONTENT_MODEL} (fallback: ${CONTENT_MODEL_FALLBACK})`);
 console.log(`   Formatter Model: ${FORMATTER_MODEL} (fallback: ${FORMATTER_MODEL_FALLBACK})`);
+
+// Check R2 Cloud Storage configuration
+if (isCloudStorageEnabled()) {
+  console.log('☁️  Cloudflare R2 Storage: ✅ Configured');
+  console.log(`   Bucket: ${process.env.R2_BUCKET_NAME}`);
+  console.log(`   Public URL: ${process.env.R2_PUBLIC_URL || `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev`}`);
+  console.log('   Article images will be stored in R2');
+} else {
+  console.warn('⚠️  Cloudflare R2 Storage: ❌ Not configured');
+  console.warn('   Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME');
+  console.warn('   Images will be saved locally (ephemeral on Render)');
+}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -451,32 +464,74 @@ Make it specific to the topic and avoid generic templates. Return ONLY the title
     
     console.log(`✅ Step 3 complete: Title: "${title}"`);
     
-    // ========== STEP 4: GENERATE HERO IMAGE ==========
-    generationStatus.set(jobId, { step: 'image', message: 'Step 4: Generating hero image...' });
-    console.log('🎨 Step 4: Generating article hero image...');
-    
+    // ========== STEP 4: GENERATE HERO IMAGE (only if featured) ==========
     let imageUrl = null;
     let imageAlt = null;
     
-    try {
-      const imageResult = await generateArticleImage({
-        title,
-        description: excerpt,
-        slug,
-        quickAnswer: excerpt  // Use excerpt as quick answer
-      }, process.env.OPENAI_API_KEY);
+    if (params.featured) {
+      generationStatus.set(jobId, { step: 'image', message: 'Step 4: Generating hero image...' });
+      console.log('🎨 Step 4: Generating article hero image (featured article)...');
       
-      imageUrl = imageResult.imageUrl;
-      imageAlt = imageResult.imageAlt;
-      
-      console.log('✅ Step 4 complete: Hero image generated');
-    } catch (error) {
-      console.warn('⚠️ Image generation failed, continuing without image:', error.message);
-      // Continue without image - not critical
+      try {
+        const imageResult = await generateArticleImage({
+          title,
+          description: excerpt,
+          slug,
+          quickAnswer: excerpt  // Use excerpt as quick answer
+        }, process.env.OPENAI_API_KEY);
+        
+        imageUrl = imageResult.imageUrl;
+        imageAlt = imageResult.imageAlt;
+        
+        console.log('✅ Step 4 complete: Hero image generated');
+      } catch (error) {
+        console.warn('⚠️ Image generation failed, continuing without image:', error.message);
+        // Continue without image - not critical
+      }
+    } else {
+      console.log('⏭️ Step 4 skipped: Image generation skipped (article is not featured)');
     }
     
-    // ========== STEP 5: SAVE TO DATABASE ==========
-    console.log('💾 Step 5: Saving to database...');
+    // ========== STEP 5: MANAGE FEATURED ARTICLES (max 3) ==========
+    // If this article is being featured, ensure we only have max 3 featured articles
+    if (params.featured) {
+      console.log('🔍 Checking featured articles limit (max 3)...');
+      
+      // Count current featured articles
+      const featuredCountResult = await pool.query(
+        'SELECT COUNT(*) as count FROM articles WHERE featured = true AND status = $1',
+        ['published']
+      );
+      const featuredCount = parseInt(featuredCountResult.rows[0].count);
+      
+      // If we already have 3 featured articles, unfeature the oldest one
+      if (featuredCount >= 3) {
+        console.log(`⚠️ Already have ${featuredCount} featured articles. Unfeaturing oldest...`);
+        
+        const oldestFeaturedResult = await pool.query(
+          `SELECT id, title FROM articles 
+           WHERE featured = true AND status = $1 
+           ORDER BY date_published ASC, date_created ASC 
+           LIMIT 1`,
+          ['published']
+        );
+        
+        if (oldestFeaturedResult.rows.length > 0) {
+          const oldestId = oldestFeaturedResult.rows[0].id;
+          const oldestTitle = oldestFeaturedResult.rows[0].title;
+          
+          await pool.query(
+            'UPDATE articles SET featured = false WHERE id = $1',
+            [oldestId]
+          );
+          
+          console.log(`✅ Unfeatured oldest article: "${oldestTitle}" (ID: ${oldestId})`);
+        }
+      }
+    }
+    
+    // ========== STEP 6: SAVE TO DATABASE ==========
+    console.log('💾 Step 6: Saving to database...');
     const query = `
       INSERT INTO articles (
         title, description, article, url, meta_description, topic, 
@@ -654,6 +709,43 @@ app.put('/api/articles/:id', async (req, res) => {
       status,
       featured
     } = req.body;
+    
+    // If setting this article as featured, ensure we only have max 3 featured articles
+    if (featured === true) {
+      console.log('🔍 Checking featured articles limit (max 3) for manual update...');
+      
+      // Count current featured articles (excluding the one being updated)
+      const featuredCountResult = await pool.query(
+        'SELECT COUNT(*) as count FROM articles WHERE featured = true AND status = $1 AND id != $2',
+        ['published', id]
+      );
+      const featuredCount = parseInt(featuredCountResult.rows[0].count);
+      
+      // If we already have 3 featured articles (excluding current), unfeature the oldest one
+      if (featuredCount >= 3) {
+        console.log(`⚠️ Already have ${featuredCount} featured articles. Unfeaturing oldest...`);
+        
+        const oldestFeaturedResult = await pool.query(
+          `SELECT id, title FROM articles 
+           WHERE featured = true AND status = $1 AND id != $2
+           ORDER BY date_published ASC, date_created ASC 
+           LIMIT 1`,
+          ['published', id]
+        );
+        
+        if (oldestFeaturedResult.rows.length > 0) {
+          const oldestId = oldestFeaturedResult.rows[0].id;
+          const oldestTitle = oldestFeaturedResult.rows[0].title;
+          
+          await pool.query(
+            'UPDATE articles SET featured = false WHERE id = $1',
+            [oldestId]
+          );
+          
+          console.log(`✅ Unfeatured oldest article: "${oldestTitle}" (ID: ${oldestId})`);
+        }
+      }
+    }
     
     const query = `
       UPDATE articles SET

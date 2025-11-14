@@ -20,7 +20,7 @@ const CCVFooter = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl">
               <Mail className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-3xl font-light">Join 500+ founders getting PMF insights 2x/month</h3>
+            <h3 className="text-3xl font-bold text-white">Join 500+ founders getting PMF insights 2x/month</h3>
             <p className="text-xl text-slate-300 max-w-2xl mx-auto">
               Future Cash-Flow Newsletter: Strategic insights that turn confusion into unstoppable momentum.
             </p>
@@ -166,11 +166,11 @@ const CCVFooter = () => {
             <p className="text-slate-400 text-lg">
               © {currentYear} Crowley Capital Ventures – Clarity for Founders. Traction for Products.
             </p>
-            <div className="flex items-center gap-8">
-              <a href="/admin" className="text-slate-400 hover:text-white transition-colors">Admin</a>
-              <a href="/legal/linkedin-api-terms" className="text-slate-400 hover:text-white transition-colors">Terms</a>
-              <a href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy</a>
-              <a href="/press-kit" className="text-slate-400 hover:text-white transition-colors">Press Kit</a>
+            <div className="flex items-center gap-8 flex-wrap justify-center">
+              <Link to="/admin" className="text-slate-400 hover:text-white transition-colors">Admin</Link>
+              <Link to="/legal/linkedin-api-terms" className="text-slate-400 hover:text-white transition-colors">LinkedIn API Terms</Link>
+              <Link to="/legal/terms-and-conditions" className="text-slate-400 hover:text-white transition-colors">Terms & Conditions</Link>
+              <Link to="/legal/privacy-policy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</Link>
             </div>
           </div>
         </div>

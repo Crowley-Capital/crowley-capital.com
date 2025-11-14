@@ -49,12 +49,18 @@ const CCVNavbar = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-lg transition-all duration-500">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        isScrolled 
+          ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-lg' 
+          : 'bg-transparent backdrop-blur-sm'
+      }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-3 cursor-pointer hover:scale-105 transition-transform" onClick={handleLogoClick}>
               <CCVLogo size="sm" variant="dark" />
-              <span className="text-lg font-semibold tracking-tight hidden sm:block text-black">
+              <span className={`text-lg font-semibold tracking-tight hidden sm:block transition-colors duration-300 ${
+                isScrolled ? 'text-black' : 'text-white'
+              }`}>
                 Crowley Capital
               </span>
             </div>
@@ -63,31 +69,43 @@ const CCVNavbar = () => {
             <nav className="hidden md:flex items-center gap-8">
               <button 
                 onClick={() => scrollToSection('about')}
-                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
+                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
+                  isScrolled ? 'text-slate-700 hover:text-black' : 'text-white/90 hover:text-white'
+                }`}
               >
                 About
               </button>
               <button 
                 onClick={() => scrollToSection('offerings')}
-                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
+                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
+                  isScrolled ? 'text-slate-700 hover:text-black' : 'text-white/90 hover:text-white'
+                }`}
               >
                 Services
               </button>
               <button 
                 onClick={() => scrollToSection('newsletter')}
-                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
+                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
+                  isScrolled ? 'text-slate-700 hover:text-black' : 'text-white/90 hover:text-white'
+                }`}
               >
                 Newsletter
               </button>
               <Link 
                 to="/articles"
-                className="font-medium text-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-black"
+                className={`font-medium text-lg transition-all duration-300 hover:scale-105 ${
+                  isScrolled ? 'text-slate-700 hover:text-black' : 'text-white/90 hover:text-white'
+                }`}
               >
                 Articles
               </Link>
               <Button 
                 onClick={handleBookCall}
-                className="bg-black text-white hover:bg-slate-800 px-8 py-3 text-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
+                className={`px-8 py-3 text-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg ${
+                  isScrolled 
+                    ? 'bg-black text-white hover:bg-slate-800' 
+                    : 'bg-white text-black hover:bg-white/90'
+                }`}
               >
                 Book a Session
               </Button>
@@ -95,14 +113,16 @@ const CCVNavbar = () => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-3 rounded-lg hover:bg-slate-100 transition-colors"
+              className={`md:hidden p-3 rounded-lg transition-colors ${
+                isScrolled ? 'hover:bg-slate-100' : 'hover:bg-white/10'
+              }`}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {isMobileMenuOpen ? (
-                <X className="h-6 w-6 text-black" />
+                <X className={`h-6 w-6 transition-colors ${isScrolled ? 'text-black' : 'text-white'}`} />
               ) : (
-                <Menu className="h-6 w-6 text-black" />
+                <Menu className={`h-6 w-6 transition-colors ${isScrolled ? 'text-black' : 'text-white'}`} />
               )}
             </button>
           </div>
@@ -113,7 +133,11 @@ const CCVNavbar = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="absolute top-20 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xl animate-slide-up">
+          <div className={`absolute top-20 left-0 right-0 backdrop-blur-xl border-b shadow-xl animate-slide-up ${
+            isScrolled 
+              ? 'bg-white/95 border-slate-200' 
+              : 'bg-white/95 border-slate-200'
+          }`}>
             <nav className="px-6 py-6 space-y-4">
               <button 
                 onClick={() => scrollToSection('about')}

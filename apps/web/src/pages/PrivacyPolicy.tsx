@@ -187,7 +187,7 @@ const PrivacyPolicy = () => {
                 <li>• <strong>Restriction:</strong> Request restriction of processing in certain circumstances</li>
               </ul>
               <p className="text-lg text-slate-700 leading-relaxed">
-                To exercise these rights, please contact us at jakecrowley05@gmail.com.
+                To exercise these rights, please contact us at jakecrowley@crowley-capital.com.
               </p>
             </div>
 
@@ -219,7 +219,7 @@ const PrivacyPolicy = () => {
                 <li>• <strong>Non-Discrimination:</strong> You will not be discriminated against for exercising your CCPA rights</li>
               </ul>
               <p className="text-lg text-slate-700 leading-relaxed">
-                To exercise CCPA rights, contact us at jakecrowley05@gmail.com.
+                To exercise CCPA rights, contact us at jakecrowley@crowley-capital.com.
               </p>
             </div>
 
@@ -257,8 +257,8 @@ const PrivacyPolicy = () => {
                 <div className="space-y-3 text-lg text-slate-700">
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-slate-500" />
-                    <a href="mailto:jakecrowley05@gmail.com" className="text-black underline hover:text-slate-700">
-                      jakecrowley05@gmail.com
+                    <a href="mailto:jakecrowley@crowley-capital.com" className="text-black underline hover:text-slate-700">
+                      jakecrowley@crowley-capital.com
                     </a>
                   </div>
                   <p>Location: Austin, Texas</p>

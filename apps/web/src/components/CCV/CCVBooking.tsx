@@ -221,10 +221,10 @@ const CCVBooking = () => {
               <Mail className="h-5 w-5" />
               <span className="text-lg">Prefer email?</span>
               <a 
-                href="mailto:jakecrowley05@gmail.com?subject=Strategy Session Request&body=Hi Jake, I'd like to schedule a 30-minute strategy session. Please let me know your availability." 
+                href="mailto:jakecrowley@crowley-capital.com?subject=Strategy Session Request&body=Hi Jake, I'd like to schedule a 30-minute strategy session. Please let me know your availability." 
                 className="text-black font-semibold hover:underline transition-all duration-300 hover:scale-105 inline-block"
               >
-                jakecrowley05@gmail.com
+                jakecrowley@crowley-capital.com
               </a>
             </div>
             <p className="text-sm text-slate-500 mt-2">

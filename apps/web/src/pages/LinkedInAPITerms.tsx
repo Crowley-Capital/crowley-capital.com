@@ -140,7 +140,7 @@ const LinkedInAPITerms = () => {
               <div className="bg-black text-white p-8 rounded-xl">
                 <h3 className="text-xl font-semibold mb-4">How to request deletion:</h3>
                 <p className="text-slate-200 mb-4">
-                  Email <a href="mailto:jakecrowley05@gmail.com" className="underline hover:text-slate-300">jakecrowley05@gmail.com</a> with the subject "LinkedIn Data Deletion." Include:
+                  Email <a href="mailto:jakecrowley@crowley-capital.com" className="underline hover:text-slate-300">jakecrowley@crowley-capital.com</a> with the subject "LinkedIn Data Deletion." Include:
                 </p>
                 <ol className="list-decimal list-inside space-y-2 text-slate-200">
                   <li>Your name</li>
@@ -191,8 +191,8 @@ const LinkedInAPITerms = () => {
                   <p>PO BOX 11605<br/>Austin, TX 78758</p>
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-slate-500" />
-                    <a href="mailto:jakecrowley05@gmail.com" className="text-black underline hover:text-slate-700">
-                      jakecrowley05@gmail.com
+                    <a href="mailto:jakecrowley@crowley-capital.com" className="text-black underline hover:text-slate-700">
+                      jakecrowley@crowley-capital.com
                     </a>
                   </div>
                   <div className="flex items-center gap-3">

@@ -9,7 +9,6 @@ import CCVOfferings from '@/components/CCV/CCVOfferings';
 import CCVCapabilities from '@/components/CCV/CCVCapabilities';
 import CCVBooking from '@/components/CCV/CCVBooking';
 import CCVNewsletter from '@/components/CCV/CCVNewsletter';
-import CCVEvents from '@/components/CCV/CCVEvents';
 import CCVFooter from '@/components/CCV/CCVFooter';
 
 const CrowleyCapital = () => {
@@ -38,7 +37,6 @@ const CrowleyCapital = () => {
         <CCVCapabilities />
         <CCVBooking />
         <CCVNewsletter />
-        <CCVEvents />
       </main>
       <CCVFooter />
     </div>

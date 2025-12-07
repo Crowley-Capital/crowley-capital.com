@@ -138,11 +138,11 @@ const CCVFooter = () => {
             <ul className="space-y-4">
               <li>
                 <a 
-                  href="mailto:jakecrowley05@gmail.com"
+                  href="mailto:jakecrowley@crowley-capital.com"
                   className="text-slate-400 hover:text-white transition-colors text-lg hover:underline flex items-center gap-3"
                 >
                   <Mail className="h-5 w-5" />
-                  jakecrowley05@gmail.com
+                  jakecrowley@crowley-capital.com
                 </a>
               </li>
               <li>

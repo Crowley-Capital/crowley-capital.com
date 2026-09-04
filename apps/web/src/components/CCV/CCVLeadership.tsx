@@ -6,12 +6,12 @@ import { site } from '@/content/site';
 
 const CCVLeadership = () => (
   <CCVSection id="leadership" heading={about.leadershipHeading} tone="deep">
-    <h3 className="font-serif text-3xl font-light text-cc-bone">
+    <h3 className="font-serif text-3xl font-light text-white">
       {site.principal.name}
-      <span className="block font-sans text-sm font-light text-cc-brass-light">{site.principal.title}</span>
+      <span className="block font-sans text-sm font-light text-white/85">{site.principal.title}</span>
     </h3>
-    <p className="mt-6 max-w-2xl font-sans text-lg font-light leading-relaxed text-cc-bone/85">{about.short}</p>
-    <Link to="/about" className="mt-8 inline-block font-sans text-sm font-light text-cc-brass-light hover:text-cc-brass">Learn More</Link>
+    <p className="mt-6 max-w-2xl font-sans text-lg font-light leading-relaxed text-white">{about.short}</p>
+    <Link to="/about" className="mt-8 inline-block font-sans text-sm font-light text-white underline underline-offset-4 hover:text-cc-brass">Learn More</Link>
   </CCVSection>
 );
 

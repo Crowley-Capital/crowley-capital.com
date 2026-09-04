@@ -5,12 +5,16 @@ import buildingCapacity from '@/assets/convening-building-capacity.jpg';
 import austinRemarks from '@/assets/convening-austin-remarks.jpg';
 import austinEvening from '@/assets/convening-austin-evening.jpg';
 import monaco from '@/assets/convening-monaco.jpg';
+import milken from '@/assets/about-milken-global-conference.jpg';
+import dubai from '@/assets/about-dubai.jpg';
 
 const photos = [
   { src: buildingCapacity, alt: 'Crowley Capital Building Capacity symposium, Austin, speakers and partners on stage' },
   { src: austinRemarks, alt: 'Jake Crowley, Managing Partner, giving remarks at a Crowley Capital private capital convening in Austin' },
   { src: monaco, alt: 'Crowley Capital private capital convening, Monaco' },
   { src: austinEvening, alt: 'Crowley Capital evening convening, Austin' },
+  { src: milken, alt: 'Panel discussion at the 2026 Milken Institute Global Conference' },
+  { src: dubai, alt: 'Racecourse gathering in Dubai' },
 ];
 
 const CCVConvenings = () => {
@@ -44,6 +48,8 @@ const CCVConvenings = () => {
               <img src={photos[1].src} alt={photos[1].alt} className="h-44 w-full object-cover sm:h-64" loading="lazy" />
               <img src={photos[2].src} alt={photos[2].alt} className="h-44 w-full object-cover object-[50%_65%] sm:h-64" loading="lazy" />
               <img src={photos[3].src} alt={photos[3].alt} className="col-span-2 h-56 w-full object-cover sm:h-72" loading="lazy" />
+              <img src={photos[4].src} alt={photos[4].alt} className="h-44 w-full object-cover sm:h-64" loading="lazy" />
+              <img src={photos[5].src} alt={photos[5].alt} className="h-44 w-full object-cover sm:h-64" loading="lazy" />
             </div>
           </div>
         </div>

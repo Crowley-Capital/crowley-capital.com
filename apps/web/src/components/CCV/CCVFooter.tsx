@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import CCVLogo from './CCVLogo';
-import { Linkedin, Instagram, Facebook, FileText, Mail, Calendar } from 'lucide-react';
+import { Linkedin, FileText, Mail } from 'lucide-react';
 
 const CCVFooter = () => {
   const currentYear = new Date().getFullYear();
@@ -64,24 +64,6 @@ const CCVFooter = () => {
                   className="text-[#AAAAAA] hover:text-[#0077B5] transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg p-1"
                 >
                   <Linkedin className="h-6 w-6" />
-                </a>
-                <a 
-                  href="https://www.instagram.com/crowleycapitalventures/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  aria-label="Follow Crowley Capital on Instagram"
-                  className="text-[#AAAAAA] hover:text-[#E4405F] transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg p-1"
-                >
-                  <Instagram className="h-6 w-6" />
-                </a>
-                <a 
-                  href="https://www.facebook.com/profile.php?id=61563906492918" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  aria-label="Follow Crowley Capital on Facebook"
-                  className="text-[#AAAAAA] hover:text-[#1877F2] transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg p-1"
-                >
-                  <Facebook className="h-6 w-6" />
                 </a>
               </div>
             </div>

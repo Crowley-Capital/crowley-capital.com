@@ -29,7 +29,7 @@ const ArticleDetail = () => {
 
   useEffect(() => {
     const fetchArticle = async () => {
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       
       if (!apiUrl) {
         setError('Backend API not configured');
@@ -161,7 +161,7 @@ const ArticleDetail = () => {
         <CCVNavbar />
         <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center max-w-2xl mx-auto my-20">
           <p className="text-red-900 text-lg mb-4">{error || 'Article not found'}</p>
-          <Link to="/articles" className="text-blue-600 hover:underline">
+          <Link to="/articles" className="text-white hover:underline">
             ← Back to Articles
           </Link>
         </div>

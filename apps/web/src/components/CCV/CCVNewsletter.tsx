@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Mail, TrendingUp } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 const CCVNewsletter = () => {
   return (
@@ -24,15 +24,24 @@ const CCVNewsletter = () => {
             </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
-            <button className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium transition-colors">
-              <TrendingUp className="h-5 w-5" />
-              Quarterly Reports
-            </button>
-            <button className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium transition-colors">
-              <Mail className="h-5 w-5" />
-              Qualified Investors Only
-            </button>
+          <div className="pt-8 max-w-xl mx-auto">
+            <iframe
+              src="https://jakecrowley05.substack.com/embed"
+              width="100%"
+              height="150"
+              style={{ border: '1px solid #EEE', background: 'white' }}
+              frameBorder="0"
+              scrolling="no"
+              title="Subscribe to Crowley Capital on Substack"
+            />
+            <a
+              href="https://jakecrowley05.substack.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block text-sm text-slate-600 underline underline-offset-4 hover:text-black"
+            >
+              Read past issues on Substack
+            </a>
           </div>
         </div>
       </div>

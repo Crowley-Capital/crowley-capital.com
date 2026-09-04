@@ -568,7 +568,7 @@
 }
 
 .external-link-icon {
-  @apply text-blue-600 text-xl font-bold flex-shrink-0;
+  @apply text-white text-xl font-bold flex-shrink-0;
 }
 
 .resource-description {

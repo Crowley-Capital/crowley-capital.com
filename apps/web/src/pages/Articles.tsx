@@ -40,7 +40,7 @@ const Articles = () => {
   // Fetch articles from database
   useEffect(() => {
     const fetchArticles = async () => {
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       
       if (!apiUrl) {
         setError('Backend API not configured');
@@ -138,6 +138,27 @@ const Articles = () => {
               Writing on private markets, capital allocation, infrastructure and the families and operators we work with.
             </p>
             
+            {/* Substack subscribe */}
+            <div className="max-w-2xl mx-auto mb-10">
+              <iframe
+                src="https://jakecrowley05.substack.com/embed"
+                width="100%"
+                height="150"
+                style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'white', borderRadius: '12px' }}
+                frameBorder="0"
+                scrolling="no"
+                title="Subscribe to Crowley Capital on Substack"
+              />
+              <a
+                href="https://jakecrowley05.substack.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block text-sm text-white underline underline-offset-4"
+              >
+                Read all issues on Substack
+              </a>
+            </div>
+
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto relative">
               <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />

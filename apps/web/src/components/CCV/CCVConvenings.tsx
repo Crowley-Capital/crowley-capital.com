@@ -32,7 +32,7 @@ const CCVConvenings = () => {
             </div>
             <ul className="mt-8 grid grid-cols-2 gap-x-6 gap-y-2">
               {convenings.participants.map((p) => (
-                <li key={p} className="font-sans text-sm font-light text-cc-bone/75">{p}</li>
+                <li key={p} className="font-sans text-sm font-light text-white">{p}</li>
               ))}
             </ul>
             <a

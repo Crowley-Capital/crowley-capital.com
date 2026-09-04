@@ -40,11 +40,11 @@ const CCVFooter = () => {
               <CCVLogo size="md" variant="dark" />
               <div>
                 <h4 className="text-2xl font-semibold">Crowley Capital</h4>
-                <p className="text-slate-400">Private Investment Platform</p>
+                <p className="text-slate-400">Private Investment Allocator</p>
               </div>
             </div>
             <p className="text-slate-300 text-lg leading-relaxed max-w-md">
-              An Austin-based private investment platform investing across venture capital, private equity and family office capital.
+              An Austin-based private investment allocator investing across venture capital, private equity and family office capital.
             </p>
             <div className="flex items-center justify-between">
               <button 

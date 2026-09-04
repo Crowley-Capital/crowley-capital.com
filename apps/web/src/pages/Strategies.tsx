@@ -17,12 +17,12 @@ const Block = ({ id, number, heading, paragraphs, listHeading, items, children }
       </div>
       <div className="lg:col-span-8">
         <div className="space-y-5">
-          {paragraphs.map((p) => <p key={p} className="max-w-2xl font-sans text-lg font-light leading-relaxed text-cc-bone/85">{p}</p>)}
+          {paragraphs.map((p) => <p key={p} className="max-w-2xl font-sans text-lg font-light leading-relaxed text-white">{p}</p>)}
         </div>
         <h3 className="mt-12 font-serif text-2xl font-normal text-cc-bone">{listHeading}</h3>
         <ul className="mt-6 grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3">
           {items.map((i) => (
-            <li key={i} className="border-t border-cc-hairline pt-2 font-sans text-sm font-light text-cc-bone/80">{i}</li>
+            <li key={i} className="border-t border-cc-hairline pt-2 font-sans text-sm font-light text-white">{i}</li>
           ))}
         </ul>
         {children}

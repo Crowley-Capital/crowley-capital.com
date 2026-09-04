@@ -4,7 +4,7 @@ export const hero = {
   headline: "Private Markets. Long-Term Capital. Strategic Partnerships.",
   pillarsLine: "Venture Capital · Private Equity · Family Offices",
   lead:
-    "An Austin-based private investment platform investing across venture capital, private equity and family office capital, with particular depth in infrastructure, data centers, dual-use technology, defense, space, sports and alternative assets.",
+    "An Austin-based private investment allocator investing across venture capital, private equity and family office capital, with particular depth in infrastructure, data centers, dual-use technology, defense, space, sports and alternative assets.",
 };
 
 // The three pillars, shown immediately below the hero and expanded on Investment Strategies.

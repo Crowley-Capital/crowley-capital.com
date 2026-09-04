@@ -17,7 +17,7 @@ import { site } from '@/content/site';
 const CrowleyCapital = () => {
   const location = useLocation();
   useEffect(() => {
-    document.title = `${site.name} | Private Investment Platform: Venture Capital, Private Equity, Family Offices | Austin, Texas`;
+    document.title = `${site.name} | Private Investment Allocator: Venture Capital, Private Equity, Family Offices | Austin, Texas`;
     const target = location.hash ? location.hash.slice(1) : location.state?.scrollTo;
     if (target) {
       setTimeout(() => document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' }), 100);

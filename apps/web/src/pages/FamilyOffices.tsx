@@ -17,7 +17,7 @@ const FamilyOffices = () => (
         </div>
         <div className="lg:col-span-8">
           <div className="space-y-5">
-            {familyOffices.paragraphs.map((p) => <p key={p} className="max-w-2xl font-sans text-lg font-light leading-relaxed text-cc-bone/85">{p}</p>)}
+            {familyOffices.paragraphs.map((p) => <p key={p} className="max-w-2xl font-sans text-lg font-light leading-relaxed text-white">{p}</p>)}
           </div>
           <h3 className="mt-12 font-serif text-2xl font-normal text-cc-bone">Where we work together</h3>
           <TagList items={familyOffices.themes} />

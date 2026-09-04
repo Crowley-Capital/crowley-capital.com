@@ -48,7 +48,7 @@ export const PageHeader = ({ heading, intro }: { heading: string; intro?: string
 export const TagList = ({ items }: { items: readonly string[] }) => (
   <ul className="mt-8 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
     {items.map((i) => (
-      <li key={i} className="border-t border-cc-hairline pt-2 font-sans text-sm font-light text-cc-bone/80">{i}</li>
+      <li key={i} className="border-t border-cc-hairline pt-2 font-sans text-sm font-light text-white">{i}</li>
     ))}
   </ul>
 );

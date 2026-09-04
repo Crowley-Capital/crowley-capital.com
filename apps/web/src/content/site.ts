@@ -5,7 +5,7 @@ export const site = {
   tagline: "Private Markets. Long-Term Capital. Strategic Partnerships.",
   pillarsLine: "Venture Capital · Private Equity · Family Offices",
   description:
-    "Crowley Capital is an Austin-based private investment platform investing across venture capital, private equity and family office capital, with depth in infrastructure, data centers, dual-use technology, defense, space, sports and alternative assets. Managing Partner Jake Crowley.",
+    "Crowley Capital is an Austin-based private investment allocator investing across venture capital, private equity and family office capital, with depth in infrastructure, data centers, dual-use technology, defense, space, sports and alternative assets. Managing Partner Jake Crowley.",
   url: "https://crowley-capital.com",
   offices: ["Austin", "London", "Monaco", "Dubai", "Singapore", "Australia"],
   contact: {

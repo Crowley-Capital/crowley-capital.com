@@ -1,42 +1,42 @@
-
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import CCVNavbar from '@/components/CCV/CCVNavbar';
 import CCVHero from '@/components/CCV/CCVHero';
-import CCVInvestmentFocus from '@/components/CCV/CCVInvestmentFocus';
-import CCVAbout from '@/components/CCV/CCVAbout';
-import CCVOfferings from '@/components/CCV/CCVOfferings';
-import CCVCapabilities from '@/components/CCV/CCVCapabilities';
-import CCVBooking from '@/components/CCV/CCVBooking';
+import CCVPillars from '@/components/CCV/CCVPillars';
+import CCVFocus from '@/components/CCV/CCVFocus';
+import CCVPhilosophy from '@/components/CCV/CCVPhilosophy';
+import CCVFamilyOfficeEcosystem from '@/components/CCV/CCVFamilyOfficeEcosystem';
+import CCVConvenings from '@/components/CCV/CCVConvenings';
+import CCVLeadership from '@/components/CCV/CCVLeadership';
 import CCVNewsletter from '@/components/CCV/CCVNewsletter';
+import CCVContact from '@/components/CCV/CCVContact';
 import CCVFooter from '@/components/CCV/CCVFooter';
+import { site } from '@/content/site';
 
+// Homepage section order. Reorder or remove lines here to change the page.
 const CrowleyCapital = () => {
   const location = useLocation();
-
   useEffect(() => {
-    // Handle scroll to section when navigating from other pages
-    if (location.state?.scrollTo) {
-      setTimeout(() => {
-        const element = document.getElementById(location.state.scrollTo);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
+    document.title = `${site.name} | Private Investment Allocator: Venture Capital, Private Equity, Family Offices | Austin, Texas`;
+    const target = location.hash ? location.hash.slice(1) : location.state?.scrollTo;
+    if (target) {
+      setTimeout(() => document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' }), 100);
     }
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-cc-charcoal font-sans text-cc-bone antialiased">
       <CCVNavbar />
       <main>
         <CCVHero />
-        <CCVInvestmentFocus />
-        <CCVOfferings />
-        <CCVAbout />
-        <CCVCapabilities />
-        <CCVBooking />
+        <CCVPillars />
+        <CCVFocus />
+        <CCVPhilosophy />
+        <CCVFamilyOfficeEcosystem />
+        <CCVConvenings />
+        <CCVLeadership />
         <CCVNewsletter />
+        <CCVContact />
       </main>
       <CCVFooter />
     </div>

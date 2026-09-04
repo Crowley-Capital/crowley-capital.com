@@ -20,11 +20,21 @@ export default {
     },
     extend: {
       fontFamily: {
-        inter: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['DM Serif Display', 'serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        inter: ['"DM Sans"', 'system-ui', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
       },
       colors: {
+        cc: {
+          charcoal: "var(--cc-charcoal)",
+          deep: "var(--cc-charcoal-deep)",
+          raised: "var(--cc-charcoal-raised)",
+          brass: "var(--cc-brass)",
+          "brass-light": "var(--cc-brass-light)",
+          bone: "var(--cc-bone)",
+          ash: "var(--cc-ash)",
+          hairline: "var(--cc-hairline)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

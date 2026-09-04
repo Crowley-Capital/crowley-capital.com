@@ -1,5 +1,4 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -308,3 +307,19 @@
 .shadow-3xl {
   box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.2);
 }
+
+/* Crowley Capital brand tokens */
+:root {
+  --cc-charcoal: #1F1F1F;
+  --cc-charcoal-deep: #171717;
+  --cc-charcoal-raised: #262626;
+  --cc-brass: #C9A227;
+  --cc-brass-light: #C8A96A;
+  --cc-bone: #EDE8DF;
+  --cc-ash: #D6D1C7;
+  --cc-hairline: rgba(200, 169, 106, 0.28);
+}
+.cc-reveal { opacity: 0; transform: translateY(12px); animation: cc-reveal 900ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+.cc-reveal-delay { animation-delay: 250ms; }
+@keyframes cc-reveal { to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cc-reveal, .cc-reveal-delay { animation: none; opacity: 1; transform: none; } }

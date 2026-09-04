@@ -173,7 +173,7 @@ const AdminDashboard: React.FC = React.memo(() => {
   useEffect(() => {
     // Test OpenAI connection through backend
     const testOpenAIConnection = async () => {
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       if (!apiUrl) {
         setApiConnected(false);
         return;
@@ -198,7 +198,7 @@ const AdminDashboard: React.FC = React.memo(() => {
     
     // Load scheduler status
     const loadSchedulerStatus = async () => {
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       if (!apiUrl) return;
       
       try {
@@ -283,7 +283,7 @@ const AdminDashboard: React.FC = React.memo(() => {
   }, [articles, statusFilter, searchQuery]);
 
   const loadArticles = useCallback(async () => {
-    const apiUrl = import.meta.env.API_URL;
+    const apiUrl = (import.meta.env.API_URL || '/api');
     
     if (!apiUrl) {
       console.warn('Backend API not configured. Using empty articles list.');
@@ -328,7 +328,7 @@ const AdminDashboard: React.FC = React.memo(() => {
       });
       
       // Reload scheduler status
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       if (apiUrl) {
         const response = await fetch(`${apiUrl}/scheduler/status`);
         if (response.ok) {
@@ -352,7 +352,7 @@ const AdminDashboard: React.FC = React.memo(() => {
   };
 
   const handleTestScheduler = async () => {
-    const apiUrl = import.meta.env.API_URL;
+    const apiUrl = (import.meta.env.API_URL || '/api');
     if (!apiUrl) {
       toast({
         title: 'Backend Not Configured',
@@ -411,7 +411,7 @@ const AdminDashboard: React.FC = React.memo(() => {
       }
       
       // Fetch generation status
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       try {
         const statusResponse = await fetch(`${apiUrl}/articles/status/${jobId}`);
         if (statusResponse.ok) {
@@ -524,7 +524,7 @@ const AdminDashboard: React.FC = React.memo(() => {
       };
       
       // Call backend to generate in background
-      const apiUrl = import.meta.env.API_URL;
+      const apiUrl = (import.meta.env.API_URL || '/api');
       const response = await fetch(`${apiUrl}/articles/generate`, {
         method: 'POST',
         headers: {
@@ -577,7 +577,7 @@ const AdminDashboard: React.FC = React.memo(() => {
   };
 
   const handleDeleteArticle = useCallback(async (articleId: number) => {
-    const apiUrl = import.meta.env.API_URL;
+    const apiUrl = (import.meta.env.API_URL || '/api');
     
     if (!apiUrl) {
       toast({

@@ -135,7 +135,7 @@ const Articles = () => {
               Insights & Resources
             </h1>
             <p className="text-xl md:text-2xl text-slate-300 mb-12 font-light leading-relaxed">
-              Strategic insights for startup founders navigating product, capital, and growth.
+              Writing on private markets, capital allocation, infrastructure and the families and operators we work with.
             </p>
             
             {/* Search Bar */}

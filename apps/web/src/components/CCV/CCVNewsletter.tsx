@@ -20,7 +20,7 @@ const CCVNewsletter = () => {
               Institutional-grade insights delivered quarterly
             </p>
             <p className="text-base md:text-lg text-slate-600 leading-relaxed">
-              Market commentary, sector analysis, and capital deployment trends across AI, deep-tech, and infrastructure sectors
+              Market commentary, sector analysis and capital deployment across infrastructure, data centers, dual-use technology, defense, space, sports and alternative assets
             </p>
           </div>
           

@@ -40,11 +40,11 @@ const CCVFooter = () => {
               <CCVLogo size="md" variant="dark" />
               <div>
                 <h4 className="text-2xl font-semibold">Crowley Capital</h4>
-                <p className="text-slate-400">Strategy • Product • Capital</p>
+                <p className="text-slate-400">Private Investment Platform</p>
               </div>
             </div>
             <p className="text-slate-300 text-lg leading-relaxed max-w-md">
-              Helping startup founders cut through the noise with strategic clarity, tactical execution, and capital guidance in Austin's tech ecosystem.
+              An Austin-based private investment platform investing across venture capital, private equity and family office capital.
             </p>
             <div className="flex items-center justify-between">
               <button 
@@ -91,28 +91,13 @@ const CCVFooter = () => {
             <h4 className="text-xl font-semibold">Quick Links</h4>
             <ul className="space-y-4">
               <li>
-                <button 
-                  onClick={() => scrollToSection('about')}
-                  className="text-slate-400 hover:text-white transition-colors text-lg hover:underline"
-                >
-                  About Jake
-                </button>
+                <Link to="/strategies" className="text-slate-400 hover:text-white transition-colors text-lg hover:underline">Investment Strategies</Link>
               </li>
               <li>
-                <button 
-                  onClick={() => scrollToSection('offerings')}
-                  className="text-slate-400 hover:text-white transition-colors text-lg hover:underline"
-                >
-                  Services & Offerings
-                </button>
+                <Link to="/family-offices" className="text-slate-400 hover:text-white transition-colors text-lg hover:underline">Family Offices</Link>
               </li>
               <li>
-                <button 
-                  onClick={() => scrollToSection('booking')}
-                  className="text-slate-400 hover:text-white transition-colors text-lg hover:underline"
-                >
-                  Book Strategy Session
-                </button>
+                <Link to="/about" className="text-slate-400 hover:text-white transition-colors text-lg hover:underline">About</Link>
               </li>
               <li>
                 <button 
@@ -145,17 +130,8 @@ const CCVFooter = () => {
                   jakecrowley@crowley-capital.com
                 </a>
               </li>
-              <li>
-                <button 
-                  onClick={() => scrollToSection('booking')}
-                  className="text-slate-400 hover:text-white transition-colors text-lg hover:underline flex items-center gap-3"
-                >
-                  <Calendar className="h-5 w-5" />
-                  Schedule a Call
-                </button>
-              </li>
               <li className="text-slate-400 text-lg">
-                📍 Based in Austin, TX
+                Austin, London, Monaco, Dubai, Singapore, Australia
               </li>
             </ul>
           </div>
@@ -164,7 +140,7 @@ const CCVFooter = () => {
         <div className="border-t border-slate-700 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-slate-400 text-lg">
-              © {currentYear} Crowley Capital Ventures – Clarity for Founders. Traction for Products.
+              © 2022 Crowley Capital. All rights reserved.
             </p>
             <div className="flex items-center gap-8 flex-wrap justify-center">
               <Link to="/admin" className="text-slate-400 hover:text-white transition-colors">Admin</Link>

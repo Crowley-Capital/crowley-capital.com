@@ -7,6 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { StrictMode } from "react";
 import NotFound from "./pages/NotFound";
 import CrowleyCapital from "./pages/CrowleyCapital";
+import Strategies from "./pages/Strategies";
+import FamilyOffices from "./pages/FamilyOffices";
+import About from "./pages/About";
 import Articles from "./pages/Articles";
 import ArticleDetail from "./pages/ArticleDetail";
 import Admin from "./pages/Admin";
@@ -40,6 +43,9 @@ const App = () => {
             >
               <Routes>
                 <Route path="/" element={<CrowleyCapital />} />
+                <Route path="/strategies" element={<Strategies />} />
+                <Route path="/family-offices" element={<FamilyOffices />} />
+                <Route path="/about" element={<About />} />
                 <Route path="/articles" element={<Articles />} />
                 <Route path="/articles/:id" element={<ArticleDetail />} />
                 <Route path="/admin" element={<Admin />} />
